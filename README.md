@@ -61,6 +61,35 @@
 - 离线安装
   - [下载最新 build 文件](https://github.com/kenmingwang/azusa-player/releases)，解压，Chrome 开启开发者模式，加载解压后的文件夹。
 
+## 本地开发环境
+
+### Windows
+
+1. 先安装 Node.js LTS。
+   - 可以使用 `winget install OpenJS.NodeJS.LTS`
+2. 安装完成后，建议先重启电脑，再打开新的 `PowerShell` / `pwsh`。
+   - 仅重启终端在部分 Windows 环境下可能不会立即刷新环境变量，重启电脑更稳妥。
+3. 验证 `node` 和 `npm` 已经生效：
+
+```powershell
+node -v
+npm -v
+```
+
+4. 进入项目目录后安装依赖：
+
+```powershell
+npm install
+```
+
+5. 常用命令：
+
+```powershell
+npm run dev
+npm run build
+npm run test:run
+```
+
 ![imgurl](https://raw.githubusercontent.com/kenmingwang/azusa-player/master/docs/assets/azusa-player-tutorial.png)
 
 ## 项目技术栈

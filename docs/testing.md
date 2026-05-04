@@ -11,6 +11,8 @@ Azusa Player now uses three testing layers:
 
 ## Local Workflow
 
+On Windows, if you just installed Node.js and `npm` is still unavailable in a fresh terminal, restart the computer first. In some setups, restarting only `PowerShell` / `pwsh` is not enough for the new PATH to take effect reliably.
+
 Use the fast regression suite while iterating on logic or UI state:
 
 ```bash
