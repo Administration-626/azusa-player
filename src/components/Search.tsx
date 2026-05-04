@@ -1,8 +1,9 @@
-﻿import Box from '@mui/material/Box';
+import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import React, { useState } from 'react';
-import { getSongList, getFavList, getBiliSeriesList, getBiliColleList, SearchSource } from '../background/DataProcess';
 import CircularProgress from '@mui/material/CircularProgress';
+import { getSongList, getFavList, getBiliSeriesList, getBiliColleList, SearchSource } from '../background/DataProcess';
+import { parseSearchSource } from '../utils/searchSource';
 
 const SEARCH_ID = 'FavList-Search';
 
@@ -24,76 +25,38 @@ export const Search = function ({ handleSeach }: SearchProps) {
     info: { title, id: SEARCH_ID, source },
   });
 
-  const parseSpaceBilibiliSource = (
-    input: string,
-  ): { type: 'series' | 'collection'; mid: string; sid: string } | undefined => {
-    try {
-      const url = new URL(input);
-      if (url.hostname !== 'space.bilibili.com') return undefined;
-
-      const pathParts = url.pathname.split('/').filter(Boolean);
-      const mid = pathParts[0];
-      if (!/^\d+$/.test(mid)) return undefined;
-
-      if (pathParts[1] === 'lists' && /^\d+$/.test(pathParts[2] || '')) {
-        const sid = pathParts[2];
-        const listType = url.searchParams.get('type');
-        if (listType === 'series') return { type: 'series', mid, sid };
-        if (listType === 'season') return { type: 'collection', mid, sid };
-      }
-
-      if (pathParts[1] === 'channel' && pathParts[2] === 'seriesdetail') {
-        const sid = url.searchParams.get('sid');
-        if (sid && /^\d+$/.test(sid)) return { type: 'series', mid, sid };
-      }
-
-      if (pathParts[1] === 'channel' && pathParts[2] === 'collectiondetail') {
-        const sid = url.searchParams.get('sid');
-        if (sid && /^\d+$/.test(sid)) return { type: 'collection', mid, sid };
-      }
-    } catch {
-      return undefined;
-    }
-
-    return undefined;
-  };
-
   const runSearch = async (input: string) => {
     setLoading(true);
     try {
-      const biliSource = parseSpaceBilibiliSource(input);
-      if (biliSource?.type === 'series') {
-        const songs = await getBiliSeriesList(biliSource.mid, biliSource.sid);
-        handleSeach(
-          buildResult(`\u641c\u7d22\u5408\u96c6 - \u7528\u6237${biliSource.mid} / ${biliSource.sid}`, songs, biliSource),
-        );
+      const source = parseSearchSource(input) || (/^\d+$/.test(input) ? ({ type: 'fav', mid: input } satisfies SearchSource) : undefined);
+      if (!source) {
+        handleSeach(buildResult(`无法识别的搜索输入 - ${input}`, []));
         return;
       }
 
-      if (biliSource?.type === 'collection') {
-        const songs = await getBiliColleList(biliSource.mid, biliSource.sid);
-        handleSeach(
-          buildResult(`\u641c\u7d22\u5408\u96c6 - \u7528\u6237${biliSource.mid} / ${biliSource.sid}`, songs, biliSource),
-        );
+      if (source.type === 'bvid') {
+        const songs = await getSongList(source.bvid);
+        handleSeach(buildResult(`搜索视频 - ${source.bvid}`, songs, source));
         return;
       }
 
-      if (input.startsWith('BV')) {
-        const songs = await getSongList(input);
-        handleSeach(buildResult(`\u641c\u7d22\u6b4c\u5355 - ${input}`, songs, { type: 'bvid', bvid: input }));
+      if (source.type === 'fav') {
+        const songs = await getFavList(source.mid);
+        handleSeach(buildResult(`搜索收藏夹 - ${source.mid}`, songs, source));
         return;
       }
 
-      if (!/^\d+$/.test(input)) {
-        handleSeach(buildResult(`\u65e0\u6cd5\u8bc6\u522b\u7684\u641c\u7d22\u8f93\u5165 - ${input}`, []));
+      if (source.type === 'series') {
+        const songs = await getBiliSeriesList(source.mid, source.sid);
+        handleSeach(buildResult(`搜索系列 - 用户${source.mid} / ${source.sid}`, songs, source));
         return;
       }
 
-      const songs = await getFavList(input);
-      handleSeach(buildResult(`\u641c\u7d22\u6b4c\u5355 - ${input}`, songs, { type: 'fav', mid: input }));
+      const songs = await getBiliColleList(source.mid, source.sid);
+      handleSeach(buildResult(`搜索合集 - 用户${source.mid} / ${source.sid}`, songs, source));
     } catch (error) {
       console.error(error);
-      handleSeach(buildResult(`\u641c\u7d22\u5931\u8d25 - ${input}`, []));
+      handleSeach(buildResult(`搜索失败 - ${input}`, []));
     } finally {
       setLoading(false);
     }
@@ -107,8 +70,8 @@ export const Search = function ({ handleSeach }: SearchProps) {
           color='secondary'
           size='small'
           fullWidth
-          label={'BVid / \u6536\u85cf\u5939ID / \u5408\u96c6\u94fe\u63a5'}
-          placeholder='BV1w44y1b7MX / 1303535681'
+          label='BVid / 收藏夹ID或链接 / 合集链接'
+          placeholder='BV1w44y1b7MX / 1303535681 / https://space.bilibili.com/.../favlist?fid=...'
           onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
             if (e.key === 'Enter') {
               e.preventDefault();

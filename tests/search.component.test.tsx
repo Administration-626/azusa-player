@@ -73,6 +73,29 @@ describe('Search component regression', () => {
     });
   });
 
+  it('searches by favorite link via getFavList', async () => {
+    const user = userEvent.setup();
+    const handleSeach = vi.fn();
+    mocks.getFavList.mockResolvedValue([{ id: 'fav-cid-2', bvid: 'BV1fav', name: 'fav-song-from-link' }]);
+
+    render(<Search handleSeach={handleSeach} />);
+
+    const input = screen.getByLabelText(/BVid/i);
+    await user.type(input, 'https://space.bilibili.com/123456/favlist?fid=1042352181{enter}');
+
+    await waitFor(() => {
+      expect(mocks.getFavList).toHaveBeenCalledWith('1042352181');
+      expect(handleSeach).toHaveBeenCalledTimes(1);
+    });
+
+    expect(handleSeach.mock.calls[0][0]).toMatchObject({
+      info: {
+        source: { type: 'fav', mid: '1042352181' },
+        title: expect.stringContaining('收藏夹'),
+      },
+    });
+  });
+
   it('searches collection link via getBiliColleList', async () => {
     const user = userEvent.setup();
     const handleSeach = vi.fn();

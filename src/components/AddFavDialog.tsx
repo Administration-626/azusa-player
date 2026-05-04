@@ -147,6 +147,9 @@ export const HelpDialog = function ({ onClose, openState }: HelpDialogProps) {
         <DialogContentText>- BVID: `BV1wr4y1v7TA`</DialogContentText>
         <DialogContentText>- 收藏夹 ID: `1793186881`</DialogContentText>
         <DialogContentText>
+          - 收藏夹链接: `https://space.bilibili.com/&lt;uid&gt;/favlist?fid=&lt;收藏夹ID&gt;`
+        </DialogContentText>
+        <DialogContentText>
           - Collection / Season 链接: `https://space.bilibili.com/&lt;uid&gt;/lists/&lt;sid&gt;?type=season`
         </DialogContentText>
         <DialogContentText>
