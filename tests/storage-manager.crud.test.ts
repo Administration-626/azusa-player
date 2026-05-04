@@ -18,6 +18,7 @@ describe('StorageManager CRUD regression', () => {
     const manager = StorageManager.getInstance();
 
     const created = manager.addFavList('E2E Test List');
+    expect((manager as any).latestFavLists.map((list: any) => list.info.id)).toContain(created.info.id);
     await tick();
 
     expect(created.info.id).toContain('FavList-');
@@ -82,6 +83,32 @@ describe('StorageManager CRUD regression', () => {
 
     await manager.setPlayerSetting({ lyricFontSize: 18 });
     expect(await manager.getPlayerSetting()).toEqual({ lyricFontSize: 18 });
+  });
+
+  it('allows immediate update right after playlist creation without waiting for async storage callbacks', async () => {
+    const manager = StorageManager.getInstance();
+    const created = manager.addFavList('Immediate Update List');
+
+    manager.updateFavList({
+      info: { ...created.info, source: { type: 'fav', mid: '1042352181' } },
+      songList: [
+        {
+          id: 'song-1',
+          bvid: 'BV1yNPbzjEVq',
+          name: 'song-1',
+          singer: 'Singer',
+          singerId: '1',
+          cover: 'cover',
+        } as any,
+      ],
+    } as any);
+
+    await tick();
+
+    const storedList = await manager.readLocalStorage(created.info.id);
+    expect(storedList.info.source).toEqual({ type: 'fav', mid: '1042352181' });
+    expect(storedList.songList).toHaveLength(1);
+    expect((manager as any).latestFavLists.find((list: any) => list.info.id === created.info.id)?.songList).toHaveLength(1);
   });
 
   it('skips sync writes when a playlist payload exceeds sync per-item quota', async () => {

@@ -247,8 +247,12 @@ export default class StorageManager {
       info: { title: favName, id: `FavList-${uuidv4()}` },
     };
 
-    browserApi.storage.local.set({ [value.info.id]: value }, () => {
+    if (!this.latestFavLists.find((v) => v.info.id === value.info.id)) {
       this.latestFavLists.push(value);
+      this.setFavLists([...this.latestFavLists]);
+    }
+
+    browserApi.storage.local.set({ [value.info.id]: value }, () => {
       const newListIDs = this.latestFavLists.map((v) => v.info.id);
       browserApi.storage.local.set({ [MY_FAV_LIST_KEY]: newListIDs }, () => {
         this.setFavLists([...this.latestFavLists]);
@@ -268,14 +272,19 @@ export default class StorageManager {
   updateFavList(updatedToList: PlayList) {
     browserApi.storage.local.set({ [updatedToList.info.id]: updatedToList }, () => {
       const index = this.latestFavLists.findIndex((f) => f.info.id == updatedToList.info.id);
+      const hydratedList = {
+        info: { ...updatedToList.info },
+        songList: this.hydrateSongs(updatedToList.songList as any),
+      };
+
       if (index !== -1) {
-        this.latestFavLists[index] = {
-          info: { ...updatedToList.info },
-          songList: this.hydrateSongs(updatedToList.songList as any),
-        };
-        this.setFavLists([...this.latestFavLists]);
-        this.syncFavListsToCloud();
+        this.latestFavLists[index] = hydratedList;
+      } else {
+        this.latestFavLists.push(hydratedList);
       }
+
+      this.setFavLists([...this.latestFavLists]);
+      this.syncFavListsToCloud();
     });
   }
 

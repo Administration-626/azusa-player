@@ -381,6 +381,14 @@ export const FavList = memo(function ({
   };
 
   const handleAddToFavClick = (id: string, songs: SongLike[]) => {
+    const availableTargets = (favLists || []).filter((fav) => fav.info.id !== id);
+    if (!availableTargets.length) {
+      setRefreshNotice({
+        severity: 'warning',
+        message: '当前没有可添加的目标歌单，请先新建另一个歌单。',
+      });
+      return;
+    }
     setActionFavId(id);
     setActionSongs(Array.isArray(songs) ? songs : songs ? [songs] : []);
     setOpenAddDialog(true);
@@ -388,11 +396,23 @@ export const FavList = memo(function ({
 
   const onAddFav = (fromId?: string | null, toId?: string, songs: SongLike[] = []) => {
     setOpenAddDialog(false);
-    if (!toId || !favLists) return;
+    if (!toId || !favLists) {
+      setRefreshNotice({
+        severity: 'warning',
+        message: '未选择目标歌单，添加已取消。',
+      });
+      return;
+    }
 
     let fromSongs: SongLike[] = [];
     const toList = favLists.find((f) => f.info.id === toId);
-    if (!toList) return;
+    if (!toList) {
+      setRefreshNotice({
+        severity: 'error',
+        message: '目标歌单不存在，请稍后重试。',
+      });
+      return;
+    }
 
     if (songs?.length) {
       fromSongs = songs;
@@ -403,14 +423,41 @@ export const FavList = memo(function ({
       fromSongs = fromList?.songList || [];
     }
 
+    if (!fromSongs.length) {
+      setRefreshNotice({
+        severity: 'warning',
+        message: '没有可添加的歌曲。',
+      });
+      return;
+    }
+
     const newSongList = fromSongs.filter((s) => toList.songList.find((v) => v.id === s.id) === undefined);
+    if (!newSongList.length) {
+      setRefreshNotice({
+        severity: 'warning',
+        message: `目标歌单“${toList.info.title}”里已经有这些歌曲了。`,
+      });
+      return;
+    }
+
     const updatedToList = { info: toList.info, songList: newSongList.concat(toList.songList) };
     StorageManager.updateFavList(updatedToList);
+    setRefreshNotice({
+      severity: 'success',
+      message: `已添加 ${newSongList.length} 首到“${toList.info.title}”。`,
+    });
   };
 
   const onDelteFav = (val?: string) => {
     setOpenDeleteDialog(false);
     if (!val || !favLists) return;
+    if (favLists.length <= 1) {
+      setRefreshNotice({
+        severity: 'warning',
+        message: '至少保留一个歌单，不能删除最后一个歌单。',
+      });
+      return;
+    }
 
     const newFavLists = favLists.filter((f) => f.info.id !== val);
     StorageManager.deleteFavList(val, newFavLists);
