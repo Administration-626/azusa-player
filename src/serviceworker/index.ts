@@ -70,6 +70,16 @@ const describeSource = (source: SearchSource) => {
   }
 };
 
+const getFavInfoFromStorage = async (favId: string): Promise<FavInfo | null> => {
+  try {
+    const result = await getFromLocalStorage([favId]);
+    const info = result?.[favId]?.info;
+    return isFavInfo(info) ? info : null;
+  } catch {
+    return null;
+  }
+};
+
 const sendFavUpdate = (favId: string, count: number) => {
   chrome.runtime.sendMessage(
     {
@@ -89,6 +99,13 @@ const notify = (title: string, message: string) => {
     title,
     message,
   });
+};
+
+const describeError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error || '');
+  if (!message) return '未知错误';
+  if (message.length <= 120) return message;
+  return `${message.slice(0, 117)}...`;
 };
 
 const removeAllMenus = () =>
@@ -279,27 +296,36 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (!isLinkMenu && !isPageMenu && !isElementMenu) return;
 
   const favId = info.menuItemId.slice(info.menuItemId.indexOf('::') + 2);
-  const favName = latestFavMenuInfos.find((v) => v.id === favId)?.title;
-  if (!favName) return;
+  void (async () => {
+    const favInfo = latestFavMenuInfos.find((v) => v.id === favId) || (await getFavInfoFromStorage(favId));
+    if (!favInfo) {
+      notify('添加失败', '目标歌单不存在，请刷新扩展后重试。');
+      return;
+    }
 
-  const tabId = typeof tab?.id === 'number' ? tab.id : undefined;
-  const source = isElementMenu
-    ? (typeof tabId === 'number' ? specialContextByTabId.get(tabId) : undefined)
-    : parseSearchSource(isLinkMenu ? info.linkUrl : info.pageUrl);
-  if (!source) {
-    notify('添加失败', '当前目标不是支持的 B 站视频 / 收藏夹 / 合集 / series / season。');
-    return;
-  }
+    const tabId = typeof tab?.id === 'number' ? tab.id : undefined;
+    const source = isElementMenu
+      ? (typeof tabId === 'number' ? specialContextByTabId.get(tabId) : undefined)
+      : parseSearchSource(isLinkMenu ? info.linkUrl : info.pageUrl);
+    if (!source) {
+      notify('添加失败', '当前目标不是支持的 B 站视频 / 收藏夹 / 合集 / series / season。');
+      return;
+    }
 
-  addSourceToFav(source, favId, tabId)
-    .then((count) => {
-      sendFavUpdate(favId, count);
-      notify('已添加到歌单', `已将 ${describeSource(source)} 添加到 ${favName}`);
-    })
-    .catch((error) => {
-      console.error('[azusa-player][context-menu] add failed', error);
-      notify('添加失败', `无法将 ${describeSource(source)} 添加到 ${favName}`);
-    });
+    addSourceToFav(source, favId, tabId)
+      .then((count) => {
+        if (count === 0) {
+          notify('无需添加', `${favInfo.title} 里已经有 ${describeSource(source)} 的全部歌曲了。`);
+          return;
+        }
+        sendFavUpdate(favId, count);
+        notify('已添加到歌单', `已将 ${describeSource(source)} 的 ${count} 首歌曲添加到 ${favInfo.title}`);
+      })
+      .catch((error) => {
+        console.error('[azusa-player][context-menu] add failed', error);
+        notify('添加失败', `无法将 ${describeSource(source)} 添加到 ${favInfo.title}：${describeError(error)}`);
+      });
+  })();
 });
 
 async function addSourceToFav(source: SearchSource, favId: string, tabId?: number) {
