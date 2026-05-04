@@ -3,6 +3,9 @@ import StorageManager from '../src/objects/Storage';
 import { createChromeMock } from './helpers/chrome-mock';
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+const flushDebounce = async () => {
+  await new Promise((resolve) => setTimeout(resolve, 850));
+};
 
 describe('StorageManager CRUD regression', () => {
   beforeEach(() => {
@@ -111,6 +114,33 @@ describe('StorageManager CRUD regression', () => {
     expect((manager as any).latestFavLists.find((list: any) => list.info.id === created.info.id)?.songList).toHaveLength(1);
   });
 
+  it('debounces sync writes when playlists change repeatedly in a short time', async () => {
+    const manager = StorageManager.getInstance();
+    const syncSetSpy = vi.spyOn(chrome.storage.sync, 'set');
+    syncSetSpy.mockClear();
+
+    const created = manager.addFavList('Debounced Sync List');
+    await tick();
+
+    manager.updateFavList({
+      info: created.info,
+      songList: [{ id: 'song-1', bvid: 'BV1', name: 'song-1', singer: 'Singer', singerId: '1', cover: 'cover' } as any],
+    } as any);
+    manager.updateFavList({
+      info: created.info,
+      songList: [{ id: 'song-2', bvid: 'BV2', name: 'song-2', singer: 'Singer', singerId: '1', cover: 'cover' } as any],
+    } as any);
+    manager.updateFavList({
+      info: created.info,
+      songList: [{ id: 'song-3', bvid: 'BV3', name: 'song-3', singer: 'Singer', singerId: '1', cover: 'cover' } as any],
+    } as any);
+
+    expect(syncSetSpy).not.toHaveBeenCalled();
+    await flushDebounce();
+
+    expect(syncSetSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('skips sync writes when a playlist payload exceeds sync per-item quota', async () => {
     const manager = StorageManager.getInstance();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -136,7 +166,7 @@ describe('StorageManager CRUD regression', () => {
         } as any,
       ],
     } as any);
-    await tick();
+    await flushDebounce();
 
     expect(syncSetSpy).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('sync storage skipped: playlist payload'));

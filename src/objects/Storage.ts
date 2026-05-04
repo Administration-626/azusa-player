@@ -11,6 +11,7 @@ const LYRIC_MAPPING = 'LyricMappings';
 const LAST_PLAY_LIST = 'LastPlayList';
 const PLAYER_SETTINGS = 'PlayerSetting';
 const SYNC_FAV_LIST_KEY = 'MyFavListSync';
+const SYNC_FAV_LIST_DEBOUNCE_MS = 800;
 
 export interface PlayList {
   songList: Song[];
@@ -51,11 +52,13 @@ export default class StorageManager {
   public setFavLists: (lists: PlayList[]) => void;
   public latestFavLists: PlayList[];
   private hasWarnedSyncQuotaExceeded: boolean;
+  private syncFavListsTimer: ReturnType<typeof setTimeout> | null;
 
   private constructor() {
     this.setFavLists = () => {};
     this.latestFavLists = [];
     this.hasWarnedSyncQuotaExceeded = false;
+    this.syncFavListsTimer = null;
   }
 
   public static getInstance(): StorageManager {
@@ -111,6 +114,17 @@ export default class StorageManager {
       }
       this.hasWarnedSyncQuotaExceeded = false;
     });
+  }
+
+  private queueSyncFavListsToCloud() {
+    if (this.syncFavListsTimer) {
+      clearTimeout(this.syncFavListsTimer);
+    }
+
+    this.syncFavListsTimer = setTimeout(() => {
+      this.syncFavListsTimer = null;
+      void this.syncFavListsToCloud();
+    }, SYNC_FAV_LIST_DEBOUNCE_MS);
   }
 
   private async restoreFromSyncIfNeeded(): Promise<boolean> {
@@ -210,7 +224,7 @@ export default class StorageManager {
         browserApi.storage.local.set({ [MY_FAV_LIST_KEY]: [value.info.id] }, () => {
           this.setFavLists([value]);
           this.latestFavLists = [value];
-          this.syncFavListsToCloud();
+          this.queueSyncFavListsToCloud();
 
           if (isExtensionRuntime()) {
             browserApi.runtime.sendMessage({
@@ -229,7 +243,7 @@ export default class StorageManager {
       browserApi.storage.local.set({ [MY_FAV_LIST_KEY]: newFavListIds }, () => {
         this.setFavLists(newFavLists);
         this.latestFavLists = newFavLists;
-        this.syncFavListsToCloud();
+        this.queueSyncFavListsToCloud();
 
         if (isExtensionRuntime()) {
           browserApi.runtime.sendMessage({
@@ -256,7 +270,7 @@ export default class StorageManager {
       const newListIDs = this.latestFavLists.map((v) => v.info.id);
       browserApi.storage.local.set({ [MY_FAV_LIST_KEY]: newListIDs }, () => {
         this.setFavLists([...this.latestFavLists]);
-        this.syncFavListsToCloud();
+        this.queueSyncFavListsToCloud();
 
         if (isExtensionRuntime()) {
           browserApi.runtime.sendMessage({
@@ -284,7 +298,7 @@ export default class StorageManager {
       }
 
       this.setFavLists([...this.latestFavLists]);
-      this.syncFavListsToCloud();
+      this.queueSyncFavListsToCloud();
     });
   }
 
