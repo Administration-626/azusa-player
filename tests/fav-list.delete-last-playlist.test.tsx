@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FavList } from '../src/components/FavList';
 import { createChromeMock } from './helpers/chrome-mock';
@@ -143,10 +143,10 @@ describe('FavList delete last playlist guard', () => {
 
     const addIcons = document.querySelectorAll('[data-testid="AddBoxOutlinedIcon"]');
     expect(addIcons.length).toBeGreaterThan(0);
-    await user.click(addIcons[0] as Element);
+    fireEvent.click(addIcons[addIcons.length - 1] as Element);
 
     await waitFor(() => {
       expect(screen.getByText('当前没有可添加的目标歌单，请先新建另一个歌单。')).toBeInTheDocument();
     });
   });
-};
+});

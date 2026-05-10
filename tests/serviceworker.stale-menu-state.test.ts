@@ -52,7 +52,6 @@ describe('service worker stale menu fallback', () => {
         title: '已添加到歌单',
         message: expect.stringContaining('新歌单'),
       }),
-      expect.any(Function),
     );
   });
 
@@ -83,7 +82,6 @@ describe('service worker stale menu fallback', () => {
         title: '无需添加',
         message: expect.stringContaining('已经有'),
       }),
-      expect.any(Function),
     );
   });
 
@@ -113,7 +111,6 @@ describe('service worker stale menu fallback', () => {
         title: '添加失败',
         message: expect.stringContaining('Bilibili API error -352'),
       }),
-      expect.any(Function),
     );
   });
-};
+});
