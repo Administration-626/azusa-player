@@ -70,8 +70,8 @@ export const Search = function ({ handleSeach }: SearchProps) {
           color='secondary'
           size='small'
           fullWidth
-          label='BVid / 收藏夹ID或链接 / 合集链接'
-          placeholder='BV1w44y1b7MX / 1303535681 / https://space.bilibili.com/.../favlist?fid=...'
+          label='粘贴 B 站网页链接 或 BVID'
+          placeholder='例如：https://www.bilibili.com/video/BV... 或 BV1wr4y1v7TA'
           onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
             if (e.key === 'Enter') {
               e.preventDefault();
