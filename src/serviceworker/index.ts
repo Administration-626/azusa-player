@@ -92,13 +92,76 @@ const sendFavUpdate = (favId: string, count: number) => {
   );
 };
 
-const notify = (title: string, message: string) => {
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icons/icon-128.png',
-    title,
-    message,
-  });
+const notify = (title: string, message: string, isError = false, tabId?: number) => {
+  const fallbackToSystem = () => {
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon-128.png',
+      title,
+      message,
+    });
+  };
+
+  if (typeof tabId === 'number') {
+    chrome.scripting
+      .executeScript({
+        target: { tabId },
+        func: (t: string, m: string, e: boolean) => {
+          const container = document.createElement('div');
+          Object.assign(container.style, {
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            backgroundColor: e ? '#fdecea' : '#eafaf1',
+            color: e ? '#d32f2f' : '#2e7d32',
+            border: `1px solid ${e ? '#f5c2c7' : '#badbcc'}`,
+            padding: '16px 20px',
+            borderRadius: '12px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            zIndex: '2147483647',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            opacity: '0',
+            transform: 'translateY(10px)',
+            maxWidth: '360px',
+            pointerEvents: 'none',
+          });
+
+          const titleEl = document.createElement('div');
+          titleEl.style.fontWeight = '600';
+          titleEl.style.marginBottom = '6px';
+          titleEl.style.fontSize = '15px';
+          titleEl.textContent = t;
+
+          const msgEl = document.createElement('div');
+          msgEl.style.opacity = '0.9';
+          msgEl.textContent = m;
+
+          container.appendChild(titleEl);
+          container.appendChild(msgEl);
+          document.documentElement.appendChild(container);
+
+          requestAnimationFrame(() => {
+            container.style.opacity = '1';
+            container.style.transform = 'translateY(0)';
+          });
+
+          setTimeout(() => {
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(10px)';
+            setTimeout(() => {
+              if (container.parentNode) container.parentNode.removeChild(container);
+            }, 300);
+          }, 3500);
+        },
+        args: [title, message, isError],
+      })
+      .catch(() => fallbackToSystem());
+  } else {
+    fallbackToSystem();
+  }
 };
 
 const describeError = (error: unknown) => {
@@ -167,7 +230,15 @@ const renderMenuItems = async (favListsInfo: FavInfo[]) => {
     visible: false,
   });
 
+  await createMenuItem({ id: 'link::new_fav', parentId: LINK_MENU_ID, title: '➕ 作为新歌单收藏', contexts: ['link'] });
+  await createMenuItem({ id: 'page::new_fav', parentId: PAGE_MENU_ID, title: '➕ 作为新歌单收藏', contexts: ['page'] });
+  await createMenuItem({ id: 'element::new_fav', parentId: ELEMENT_MENU_ID, title: '➕ 作为新歌单收藏', contexts: ['all'] });
+
   if (favListsInfo.length > 0) {
+    await createMenuItem({ id: 'link::separator', parentId: LINK_MENU_ID, type: 'separator', contexts: ['link'] });
+    await createMenuItem({ id: 'page::separator', parentId: PAGE_MENU_ID, type: 'separator', contexts: ['page'] });
+    await createMenuItem({ id: 'element::separator', parentId: ELEMENT_MENU_ID, type: 'separator', contexts: ['all'] });
+
     for (const info of favListsInfo) {
       await createMenuItem({
         id: toLinkChildId(info.id),
@@ -190,32 +261,7 @@ const renderMenuItems = async (favListsInfo: FavInfo[]) => {
         contexts: ['all'],
       });
     }
-    return;
   }
-
-  await createMenuItem({
-    id: EMPTY_LINK_MENU_ID,
-    parentId: LINK_MENU_ID,
-    title: '请先创建一个歌单',
-    enabled: false,
-    contexts: ['link'],
-  });
-
-  await createMenuItem({
-    id: EMPTY_PAGE_MENU_ID,
-    parentId: PAGE_MENU_ID,
-    title: '请先创建一个歌单',
-    enabled: false,
-    contexts: ['page'],
-  });
-
-  await createMenuItem({
-    id: EMPTY_ELEMENT_MENU_ID,
-    parentId: ELEMENT_MENU_ID,
-    title: '请先创建一个歌单',
-    enabled: false,
-    contexts: ['all'],
-  });
 };
 
 const requestMenuRender = (favListsInfo: FavInfo[]) => {
@@ -288,7 +334,6 @@ contextMenusApi.onHidden?.addListener(() => {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (typeof info.menuItemId !== 'string') return;
   if (info.menuItemId === LINK_MENU_ID || info.menuItemId === PAGE_MENU_ID || info.menuItemId === ELEMENT_MENU_ID) return;
-  if (info.menuItemId === EMPTY_LINK_MENU_ID || info.menuItemId === EMPTY_PAGE_MENU_ID || info.menuItemId === EMPTY_ELEMENT_MENU_ID) return;
 
   const isLinkMenu = info.menuItemId.startsWith('link::');
   const isPageMenu = info.menuItemId.startsWith('page::');
@@ -297,33 +342,64 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
   const favId = info.menuItemId.slice(info.menuItemId.indexOf('::') + 2);
   void (async () => {
-    const favInfo = latestFavMenuInfos.find((v) => v.id === favId) || (await getFavInfoFromStorage(favId));
-    if (!favInfo) {
-      notify('添加失败', '目标歌单不存在，请刷新扩展后重试。');
-      return;
-    }
-
     const tabId = typeof tab?.id === 'number' ? tab.id : undefined;
     const source = isElementMenu
       ? (typeof tabId === 'number' ? specialContextByTabId.get(tabId) : undefined)
       : parseSearchSource(isLinkMenu ? info.linkUrl : info.pageUrl);
+      
     if (!source) {
-      notify('添加失败', '当前目标不是支持的 B 站视频 / 收藏夹 / 合集 / series / season。');
+      notify('添加失败', '当前目标不是支持的 B 站视频 / 收藏夹 / 合集 / series / season。', true, tabId);
+      return;
+    }
+
+    if (favId === 'new_fav') {
+      try {
+        const songs = await getSongsFromCurrentPage(source, tabId);
+        if (!songs.length) {
+          notify('创建失败', `未能从该来源获取到任何歌曲。`, true, tabId);
+          return;
+        }
+
+        const title = songs.length === 1 ? songs[0].name : `${songs[0].name} 等`;
+        const newFavId = `FavList-${crypto.randomUUID()}`;
+        const newFav = {
+          info: { title, id: newFavId },
+          songList: songs,
+        };
+
+        const result = await getFromLocalStorage([MY_FAV_LIST_KEY]).catch(() => ({}));
+        const favListKeys = result[MY_FAV_LIST_KEY] || [];
+        favListKeys.unshift(newFavId); // prepend so it appears at top
+
+        chrome.storage.local.set({ [MY_FAV_LIST_KEY]: favListKeys, [newFavId]: newFav }, () => {
+          loadFavMenuInfos(); // Re-render menus immediately
+          notify('已创建新歌单', `已创建歌单“${title}”并添加了 ${songs.length} 首歌曲`, false, tabId);
+        });
+      } catch (error) {
+        console.error('[azusa-player][context-menu] create new fav failed', error);
+        notify('创建失败', `无法创建新歌单：${describeError(error)}`, true, tabId);
+      }
+      return;
+    }
+
+    const favInfo = latestFavMenuInfos.find((v) => v.id === favId) || (await getFavInfoFromStorage(favId));
+    if (!favInfo) {
+      notify('添加失败', '目标歌单不存在，请刷新扩展后重试。', true, tabId);
       return;
     }
 
     addSourceToFav(source, favId, tabId)
       .then((count) => {
         if (count === 0) {
-          notify('无需添加', `${favInfo.title} 里已经有 ${describeSource(source)} 的全部歌曲了。`);
+          notify('无需添加', `${favInfo.title} 里已经有 ${describeSource(source)} 的全部歌曲了。`, false, tabId);
           return;
         }
         sendFavUpdate(favId, count);
-        notify('已添加到歌单', `已将 ${describeSource(source)} 的 ${count} 首歌曲添加到 ${favInfo.title}`);
+        notify('已添加到歌单', `已将 ${describeSource(source)} 的 ${count} 首歌曲添加到 ${favInfo.title}`, false, tabId);
       })
       .catch((error) => {
         console.error('[azusa-player][context-menu] add failed', error);
-        notify('添加失败', `无法将 ${describeSource(source)} 添加到 ${favInfo.title}：${describeError(error)}`);
+        notify('添加失败', `无法将 ${describeSource(source)} 添加到 ${favInfo.title}：${describeError(error)}`, true, tabId);
       });
   })();
 });
@@ -346,8 +422,10 @@ async function addSourceToFav(source: SearchSource, favId: string, tabId?: numbe
 }
 
 async function getSongsFromCurrentPage(source: SearchSource, tabId?: number): Promise<any[]> {
+  const fallbackFetch = () => getSongsFromSource(source);
+
   if (typeof tabId !== 'number') {
-    return getSongsFromSource(source);
+    return fallbackFetch();
   }
 
   try {
@@ -359,13 +437,15 @@ async function getSongsFromCurrentPage(source: SearchSource, tabId?: number): Pr
     });
 
     const songs = results?.[0]?.result;
-    if (!Array.isArray(songs)) {
-      throw new Error('No songs returned from page context.');
+    if (Array.isArray(songs) && songs.length > 0) {
+      return songs;
     }
-    return songs;
+    
+    console.warn('[azusa-player] Page context returned invalid or empty songs, falling back...', results);
+    return fallbackFetch();
   } catch (error) {
-    console.warn('[azusa-player][context-menu] page-context fetch failed', error);
-    throw error;
+    console.warn('[azusa-player] page-context fetch failed, falling back...', error);
+    return fallbackFetch();
   }
 }
 
