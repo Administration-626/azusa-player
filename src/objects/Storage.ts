@@ -96,12 +96,6 @@ export default class StorageManager {
     const estimatedBytes = new TextEncoder().encode(JSON.stringify({ [SYNC_FAV_LIST_KEY]: payload })).length;
 
     if (estimatedBytes > quotaPerItem) {
-      if (!this.hasWarnedSyncQuotaExceeded) {
-        console.warn(
-          `sync storage skipped: playlist payload ${estimatedBytes}B exceeds per-item quota ${quotaPerItem}B`,
-        );
-        this.hasWarnedSyncQuotaExceeded = true;
-      }
       return;
     }
 
