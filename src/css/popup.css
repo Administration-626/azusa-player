@@ -86,14 +86,17 @@ body[data-theme='dark'] {
 }
 
 #FavTable {
+  border-radius: 12px;
+  backdrop-filter: blur(24px) saturate(120%);
+  transition: box-shadow 0.3s ease;
+}
+
+body[data-theme='light'] #FavTable {
   box-shadow: 0 12px 48px rgba(119, 85, 222, 0.08), 
               0 4px 12px rgba(119, 85, 222, 0.04),
               inset 0 1px 1px rgba(255, 255, 255, 0.8);
-  border-radius: 12px;
-  backdrop-filter: blur(24px) saturate(120%);
   background: rgba(255, 255, 255, 0.65) !important;
   border: 1px solid rgba(255, 255, 255, 0.7);
-  transition: box-shadow 0.3s ease;
 }
 
 #LrcImg {
