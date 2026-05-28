@@ -206,10 +206,9 @@ export default class StorageManager {
   }
 
   async initWithDefault() {
-    const songList = await getSongList(INITIAL_PLAYLIST);
     const value: PlayList = {
-      songList,
-      info: { title: 'Azusa 默认歌单', id: `FavList-${uuidv4()}` },
+      songList: [],
+      info: { title: '默认歌单', id: `FavList-${uuidv4()}` },
     };
 
     browserApi.storage.local.set(
