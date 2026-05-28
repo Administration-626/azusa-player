@@ -80,7 +80,7 @@ const CRUDIcon = {
 const songText = {
   fontSize: 14,
   minWidth: 0,
-  color: '#ab5fff',
+  color: 'var(--azusa-fg)',
   textTransform: 'none',
   justifyContent: 'flex-start',
 };
@@ -238,7 +238,7 @@ export const Fav = function ({
           <Box sx={{ px: { xs: 0.5, md: 1 }, pt: 0.5 }}>
             <Grid container spacing={1} alignItems='center'>
               <Grid item xs={12} sm={5} md={6}>
-                <Typography variant='h6' sx={{ color: '#9600af94', whiteSpace: 'nowrap', fontSize: '1rem' }}>
+                <Typography variant='h6' sx={{ color: 'var(--azusa-fg)', whiteSpace: 'nowrap', fontSize: '1rem', opacity: 0.9 }}>
                   {currentFavList.info.title}
                 </Typography>
               </Grid>
@@ -349,7 +349,7 @@ export const Fav = function ({
                             backgroundColor: 'rgba(171, 95, 255, 0.22)',
                             boxShadow: 'inset 0 0 0 2px rgba(171, 95, 255, 0.52), inset 6px 0 0 rgba(171, 95, 255, 0.88)',
                             '& td': {
-                              color: '#4f248f',
+                              color: 'var(--azusa-accent)',
                               fontWeight: 600,
                             },
                           }
@@ -372,7 +372,7 @@ export const Fav = function ({
                     </StyledTableCell>
                     <StyledTableCell
                       align='center'
-                      sx={{ minWidth: 0, color: '#ab5fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      sx={{ minWidth: 0, color: 'var(--azusa-fg)', opacity: 0.85, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                     >
                       <a href={`https://space.bilibili.com/${song.singerId}`} target='_blank' rel='noreferrer' style={{ color: 'inherit', textDecoration: 'none' }}>
                         {song.singer}

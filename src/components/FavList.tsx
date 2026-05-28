@@ -147,9 +147,9 @@ export const FavList = memo(function ({
   const [refreshNotice, setRefreshNotice] = useState<RefreshNotice | null>(null);
 
   const StorageManager = useContext(StorageManagerCtx) as any;
-  const titleColor = darkMode ? '#f2ecff' : '#9600af94';
-  const itemTextColor = darkMode ? 'rgba(226, 214, 255, 0.96)' : '#9600af94';
-  const searchTextColor = darkMode ? '#d9c3ff' : '#9c55fac9';
+  const titleColor = 'var(--azusa-fg)';
+  const itemTextColor = 'var(--azusa-fg)';
+  const searchTextColor = 'var(--azusa-fg)';
 
   const persistSelectedFavId = useCallback(
     async (favId?: string | null) => {

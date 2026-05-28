@@ -10,21 +10,21 @@ body,
 }
 
 :root {
-  /* 浅色模式（Premium Glassmorphism） */
-  --azusa-bg: radial-gradient(at 0% 0%, hsla(253, 56%, 95%, 1) 0px, transparent 50%),
-              radial-gradient(at 100% 0%, hsla(285, 46%, 94%, 1) 0px, transparent 50%),
-              radial-gradient(at 100% 100%, hsla(232, 56%, 93%, 1) 0px, transparent 50%),
-              radial-gradient(at 0% 100%, hsla(307, 46%, 95%, 1) 0px, transparent 50%);
-  --azusa-bg-color: #faf9fd;
-  --azusa-fg: #291c49;
-  --azusa-panel: rgba(255, 255, 255, 0.55);
-  --azusa-panel-strong: rgba(255, 255, 255, 0.9);
-  --azusa-panel-soft: rgba(255, 255, 255, 0.35);
-  --azusa-border: rgba(255, 255, 255, 0.6);
-  --azusa-input-bg: rgba(255, 255, 255, 0.6);
-  --azusa-input-border: rgba(171, 95, 255, 0.15);
-  --azusa-muted: rgba(86, 64, 127, 0.6);
-  --azusa-accent: #9643ff;
+  /* 浅色模式（Premium Glassmorphism） - Softer, less purple */
+  --azusa-bg: radial-gradient(at 0% 0%, hsla(215, 60%, 95%, 1) 0px, transparent 50%),
+              radial-gradient(at 100% 0%, hsla(340, 40%, 96%, 1) 0px, transparent 50%),
+              radial-gradient(at 100% 100%, hsla(260, 30%, 95%, 1) 0px, transparent 50%),
+              radial-gradient(at 0% 100%, hsla(180, 40%, 95%, 1) 0px, transparent 50%);
+  --azusa-bg-color: #f7f7f9;
+  --azusa-fg: #4a4a55;
+  --azusa-panel: rgba(255, 255, 255, 0.65);
+  --azusa-panel-strong: rgba(255, 255, 255, 0.95);
+  --azusa-panel-soft: rgba(255, 255, 255, 0.45);
+  --azusa-border: rgba(255, 255, 255, 0.8);
+  --azusa-input-bg: rgba(255, 255, 255, 0.7);
+  --azusa-input-border: rgba(140, 120, 180, 0.15);
+  --azusa-muted: rgba(110, 110, 120, 0.75);
+  --azusa-accent: #8b5edc;
 }
 
 body {
