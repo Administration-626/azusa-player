@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback, memo, useContext } from 'react';
+import React, { useEffect, useState, useCallback, memo, useContext } from 'react';
 import { Search } from './Search';
 import { Fav } from './Fav';
 import { ScrollBar } from '../styles/styles';
@@ -537,16 +537,14 @@ export const FavList = memo(function ({
               <Tooltip title='导入歌单'>
                 <FileUploadIcon sx={AddFavIcon} onClick={() => StorageManager.importStorage()} />
               </Tooltip>
-              <Badge color='secondary' variant='dot' sx={{ verticalAlign: 'baseline' }}>
-              <Tooltip title='搜索帮助'>
-                  <HelpOutlineIcon
-                    data-testid='search-help-button'
-                    aria-label='search-help-button'
-                    sx={AddFavIcon}
-                    onClick={() => setOpenHelpDialog(true)}
-                  />
-                </Tooltip>
-              </Badge>
+              <Tooltip title='添加帮助'>
+                <HelpOutlineIcon
+                  data-testid='search-help-button'
+                  aria-label='search-help-button'
+                  sx={AddFavIcon}
+                  onClick={() => setOpenHelpDialog(true)}
+                />
+              </Tooltip>
               <Tooltip title='定位当前播放歌曲'>
                 <span>
                   <NearMeIcon

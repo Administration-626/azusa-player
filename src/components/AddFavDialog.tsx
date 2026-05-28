@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Dialog from '@mui/material/Dialog';
@@ -141,24 +141,21 @@ interface HelpDialogProps {
 export const HelpDialog = function ({ onClose, openState }: HelpDialogProps) {
   return (
     <Dialog open={openState} onClose={onClose} fullWidth maxWidth='md'>
-      <DialogTitle>搜索说明</DialogTitle>
+      <DialogTitle>添加说明</DialogTitle>
       <DialogContent>
-        <DialogContentText>目前支持以下输入：</DialogContentText>
-        <DialogContentText>- BVID: `BV1wr4y1v7TA`</DialogContentText>
-        <DialogContentText>- 收藏夹 ID: `1793186881`</DialogContentText>
-        <DialogContentText>
-          - 收藏夹链接: `https://space.bilibili.com/&lt;uid&gt;/favlist?fid=&lt;收藏夹ID&gt;`
+        <DialogContentText>目前支持导入 B 站的视频、收藏夹以及 UP 主合集：</DialogContentText>
+        <DialogContentText sx={{ mt: 1 }}>
+          1. <strong>右键页面添加</strong>：在 B 站的视频页、收藏夹页或合集列表页内点击鼠标右键，使用插件菜单直接导入。
         </DialogContentText>
         <DialogContentText>
-          - Collection / Season 链接: `https://space.bilibili.com/&lt;uid&gt;/lists/&lt;sid&gt;?type=season`
+          2. <strong>右键链接添加</strong>：在网页上对着某个视频链接或封面右键，同样可以通过菜单快捷添加。
         </DialogContentText>
         <DialogContentText>
-          - Series 链接: `https://space.bilibili.com/&lt;uid&gt;/lists/&lt;sid&gt;?type=series`
+          3. <strong>直接粘贴链接</strong>：你也可以直接复制网页链接或 BVID (如 <code>BV1wr4y1v7TA</code>)，粘贴到上方的搜索栏中回车。
         </DialogContentText>
-        <DialogContentText>
-          - Season 链接: `https://space.bilibili.com/&lt;uid&gt;/lists/&lt;sid&gt;?type=season`
+        <DialogContentText sx={{ mt: 1, fontSize: '0.85em', opacity: 0.8 }}>
+          注：当前仅支持哔哩哔哩 (bilibili) 来源
         </DialogContentText>
-        <DialogContentText>右键 B 站视频也可以快速加入歌单，其他来源暂时不支持。</DialogContentText>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>关闭</Button>
