@@ -7,59 +7,52 @@
 -->
 <br>
 
-<p align="center"><a href="https://github.com/kenmingwang/azusa-player"><img width="200" src="https://github.com/kenmingwang/azusa-player/blob/master/docs/assets/logo2-01.png?raw=true"></a></p>
-
 <p align="center">
-  <a href="https://github.com/kenmingwang/azusa-player/blob/master/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-brightgreen.svg" alt="Software License" data-canonical-src="https://img.shields.io/badge/license-MIT-brightgreen.svg" style="max-width: 100%;">
-  </a>
-  <a href="">
-    <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/stars/kenmingwang/azusa-player">
-  </a>
-  <a href="https://github.com/kenmingwang/azusa-player/releases">
-    <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/kenmingwang/azusa-player">
-  </a>
-  <a href="https://github.com/kenmingwang/azusa-player/actions/workflows/webpack.yml">
-    <img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/kenmingwang/azusa-player/webpack.yml">
-  </a>
-  </br>
-  <a href="https://chrome.google.com/webstore/detail/%E7%94%B5%E6%A2%93%E6%92%AD%E6%94%BE%E5%99%A8-%E7%AC%AC%E4%B8%89%E6%96%B9bilibili%E9%9F%B3%E9%A2%91%E6%92%AD%E6%94%BE%E5%99%A8/bdplgemfnbaefommicdebhboajognnhj">
-    <img alt="GitHub Workflow Status" src="https://img.shields.io/chrome-web-store/users/bdplgemfnbaefommicdebhboajognnhj?color=blue&label=chrome-user">
-  </a>
-  <a href="https://microsoftedge.microsoft.com/addons/detail/%E7%94%B5%E6%A2%93%E6%92%AD%E6%94%BE%E5%99%A8%E7%AC%AC%E4%B8%89%E6%96%B9bilibili%E9%9F%B3%E9%A2%91%E6%92%AD%E6%94%BE%E5%99%A8/bikfgaolchpolficinadmbmkkohkbkdf">
-    <img alt="GitHub all releases" src="https://img.shields.io/badge/dynamic/json?label=edge-user&query=%24.activeInstallCount&url=https%3A%2F%2Fmicrosoftedge.microsoft.com%2Faddons%2Fgetproductdetailsbycrxid%2Fbikfgaolchpolficinadmbmkkohkbkdf">
-  </a>
-  <a href="https://github.com/kenmingwang/azusa-player/releases">
-    <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/kenmingwang/azusa-player/total">
-  </a>
+  <img width="200" src="https://github.com/kenmingwang/azusa-player/blob/master/docs/assets/logo2-01.png?raw=true">
 </p>
+
 <h3 align="center" style="color:purple">Azusa-Player / 电梓播放器</h3>
-<h4 align="center" style="color:purple">A 3rd party Bilibili audio player / 一个Bilibili第三方音频播放器</h4>
+<h4 align="center" style="color:purple">A 3rd party Bilibili audio player / 一个 Bilibili 第三方音频播放器</h4>
+
+> **Note:** 本项目 Fork 自开源仓库 [kenmingwang/azusa-player](https://github.com/kenmingwang/azusa-player)，并在此基础上使用 **Gemini 3.1 pro** 通过 **vibe coding** 辅助完成了部分体验优化与功能定制。
 
 ## 项目简介
 
-- 是真正意义上的《电梓播放器》(?): Azusa-Player！
-  - 私货默认歌单 [【阿梓】2021 精选翻唱 50 首【纯享】](https://www.bilibili.com/video/BV1wr4y1v7TA)
-- 本质上是个 b 站第三方**音频在线播放器**，以浏览器扩展插件形式展现
-- 目的是想让视频**轻量化**为音频，方便溜歌/歌单分类/下载等
-- 支持单 P/多 P 视频搜索(视情况适配新的合集功能)
-  - <del> QA 阶段才发现 b 站把分 P 砍了; ; </del>
-- 实现了歌名提取与歌词搜索
-  - 歌名提取不准确的话需要手动输歌名
-- **切片 man 不易，没有各位切片 man 也不会有这个项目的意义，请大家溜歌同时多点进视频给他们个赞 👍**
-- 自用为主要目的，不感兴趣的 feature 大概不会做，有问题可以[b 站私信](https://message.bilibili.com/#/whisper/mid1989881)
-  - 但是欢迎提 PR! <del>(虽然代码很烂)</del>
-
-### 截图：
-
-![imgur](https://raw.githubusercontent.com/kenmingwang/azusa-player/master/docs/assets/azusa-player2.gif)
+- 本质上是一个 B 站第三方的**音频在线播放器**，以浏览器扩展插件形式展现。
+- 目的是让视频**轻量化**为音频，方便日常边工作边听歌，支持无缝后台播放。
+- 实现了强大的歌单导入、一键右键添加、以及基于 QQ 音乐引擎的歌词搜索与同步功能。
+- 采用极具现代感的 Premium Glassmorphism（毛玻璃）UI 设计，支持深浅模式无缝切换。
 
 ## 安装
-
-- [Chrome Store](https://chrome.google.com/webstore/detail/%E7%94%B5%E6%A2%93%E6%92%AD%E6%94%BE%E5%99%A8-%E7%AC%AC%E4%B8%89%E6%96%B9bilibili%E9%9F%B3%E9%A2%91%E6%92%AD%E6%94%BE%E5%99%A8/bdplgemfnbaefommicdebhboajognnhj)
-- [Microsoft Store](https://microsoftedge.microsoft.com/addons/detail/%E7%94%B5%E6%A2%93%E6%92%AD%E6%94%BE%E5%99%A8%E7%AC%AC%E4%B8%89%E6%96%B9bilibili%E9%9F%B3%E9%A2%91%E6%92%AD%E6%94%BE%E5%99%A8/bikfgaolchpolficinadmbmkkohkbkdf)
 - 离线安装
-  - [下载最新 build 文件](https://github.com/kenmingwang/azusa-player/releases)，解压，Chrome 开启开发者模式，加载解压后的文件夹。
+  - 本地编译或[下载最新 build 文件](https://github.com/Administration-626/azusa-player/releases)，解压，Chrome 开启开发者模式，加载解压后的文件夹。
+
+## 如何使用
+
+### 1. 导入歌单与添加歌曲
+
+**方法一：右键菜单直接添加（推荐！）**
+在 B 站网页端，你可以直接**右键点击**任意的视频封面、收藏夹链接或者合集链接，在弹出的右键菜单中选择“添加到电梓播放器”，即可一键将其导入到你的本地歌单中！
+
+**方法二：手动复制链接搜索**
+如果你无法使用右键，也可以去 B 站网页端手动复制对应的链接，然后粘贴到插件右上角的搜索框中并回车：
+- **单曲 / 多 P 视频**：直接输入 **BV 号**
+- **UP 主合集 / 播单**：输入 **合集 / Series 链接**
+
+搜索加载出列表后，点击页面右上角的 `+` 号，即可将该歌单内的所有歌曲一次性保存到插件的本地“我的歌单”中。
+
+### 2. 播放逻辑
+在左侧“我的歌单”中点击任意一首歌曲，播放器会**自动将整个歌单加载到播放队列**中，并立即从你点击的这首歌开始播放。你可以随时点击底部的播放栏展开播放器界面。
+
+### 3. 歌词功能
+因为 B 站视频没有原生歌词，插件内置了 QQ 音乐歌词匹配引擎：
+- 展开播放器界面，点击**歌词 (Lyric)** 图标，即可打开歌词面板。
+- 如果没有自动匹配成功，可以在左侧面板手动**搜索歌词**。
+- 如果由于翻唱、前奏过长导致歌词对不上，可以调整**歌词偏移 (ms)** 时间轴。你绑定的歌词和偏移量都会永久保存在本地。
+
+### 4. 主题切换
+插件内置了高质感的“毛玻璃 (Premium Glassmorphism)” UI。你可以根据系统偏好自动适配，或者手动在设置中切换极具现代感的“浅色珍珠模式 (Light)”和“暗夜模式 (Dark)”。
+
 
 ## 本地开发环境
 
