@@ -1,5 +1,7 @@
 import * as React from "react";
 import Box from "@mui/material/Box";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 import { Player } from '../components/Player';
 
 const FOOTER_HEIGHT = 84;
@@ -10,6 +12,7 @@ const OutmostBox = {
   height: '100dvh',
   minHeight: '100vh',
   overflow: 'hidden',
+  position: 'relative',
 };
 
 const PlayerBox = {
@@ -53,6 +56,31 @@ export default function PageLayout({ songList }: PageLayoutProps) {
       <Box sx={PlayerBox}>
         <Player songList={songList} />
       </Box>
+      <Tooltip
+        title={`Commit: ${typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : 'unknown'} | Build: ${typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'unknown'}`}
+        placement="top-end"
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            position: 'absolute',
+            bottom: 4,
+            right: 8,
+            opacity: 0.6,
+            fontSize: '11px',
+            zIndex: 9999,
+            userSelect: 'none',
+            pointerEvents: 'auto',
+            cursor: 'default',
+            color: 'text.secondary',
+            '&:hover': {
+              opacity: 1,
+            },
+          }}
+        >
+          v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'unknown'} | {typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : 'unknown'} | {typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'unknown'}
+        </Typography>
+      </Tooltip>
     </Box>
   );
 }
