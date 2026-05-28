@@ -156,7 +156,7 @@ const groupSongsByBvid = (songs: SongLike[] = []): Map<string, Song[]> => {
 
 /**
  * 批量获取 BVID 对应的歌曲信息。
- * 具备容错性：如果某个视频加载失败（如已删除或私有），会跳过该视频而不会中断整体流程。
+ * 具备容错性：如果某个视频加载失败（如已删除、私有、或因 MCDN 节点导致 404），会跳过该视频而不会中断整体流程。
  */
 const fetchSongsByBvidMap = async (bvids: string[]): Promise<Map<string, Song[]>> => {
   const uniqueBvids = Array.from(new Set(bvids.filter(Boolean)));

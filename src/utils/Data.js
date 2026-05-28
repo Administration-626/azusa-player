@@ -131,6 +131,8 @@ const extractResponseJson = (json, field) => {
       return bScore - aScore;
     });
 
+    // B站 MCDN (Peer-to-Peer) 节点在扩展程序和代理环境下极不稳定，经常返回 404 或被拦截。
+    // 这里优先选择官方标准的 CDN 链接以确保播放成功率，即使这意味着可能会略微降低码率。
     const isMcdn = (url) => String(url || '').includes('mcdn.bilivideo.cn');
 
     // 深度搜索：遍历所有音轨，寻找第一个包含非 MCDN 稳定链接的音轨
