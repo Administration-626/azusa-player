@@ -376,6 +376,13 @@ export const FavList = memo(function ({
   };
 
   const handleDeleteFavClick = (id: string) => {
+    if (favLists !== null && favLists.length <= 1) {
+      setRefreshNotice({
+        severity: 'warning',
+        message: '至少保留一个歌单，不能删除最后一个歌单。',
+      });
+      return;
+    }
     setActionFavId(id);
     setOpenDeleteDialog(true);
   };
@@ -741,7 +748,7 @@ export const FavList = memo(function ({
           songs={actionSongs}
         />
       ) : null}
-      <Snackbar open={!!refreshNotice} autoHideDuration={5000} onClose={() => setRefreshNotice(null)}>
+      <Snackbar open={!!refreshNotice} autoHideDuration={5000} onClose={() => setRefreshNotice(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert onClose={() => setRefreshNotice(null)} severity={refreshNotice?.severity || 'success'} sx={{ width: '100%' }}>
           {refreshNotice?.message || ''}
         </Alert>
