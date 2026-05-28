@@ -154,18 +154,28 @@ const groupSongsByBvid = (songs: SongLike[] = []): Map<string, Song[]> => {
   return grouped;
 };
 
+/**
+ * 批量获取 BVID 对应的歌曲信息。
+ * 具备容错性：如果某个视频加载失败（如已删除或私有），会跳过该视频而不会中断整体流程。
+ */
 const fetchSongsByBvidMap = async (bvids: string[]): Promise<Map<string, Song[]>> => {
   const uniqueBvids = Array.from(new Set(bvids.filter(Boolean)));
   const entries = await Promise.all(
     uniqueBvids.map(async (bvid) => {
+      // 捕获单个视频的加载错误，防止一处失败导致全部失败
       const songs = await getSongList(bvid).catch(() => []);
       return [bvid, songs] as const;
     }),
   );
 
+  // 只保留成功加载的视频数据
   return new Map(entries.filter(([, songs]) => songs.length > 0));
 };
 
+/**
+ * 根据来源 BVID 列表重新构建歌单。
+ * 具备容错性：跳过无法从本地或远程获取的失效视频。
+ */
 const rebuildSongsFromSourceBvids = async (sourceBvids: string[], existingSongs: SongLike[] = []): Promise<Song[]> => {
   const orderedBvids = sourceBvids.map((bvid) => String(bvid || '')).filter(Boolean);
   const existingByBvid = groupSongsByBvid(existingSongs);
@@ -175,6 +185,7 @@ const rebuildSongsFromSourceBvids = async (sourceBvids: string[], existingSongs:
   const songs: Song[] = [];
   for (const bvid of orderedBvids) {
     const matchedSongs = existingByBvid.get(bvid) || fetchedByBvid.get(bvid);
+    // 只将有效（已成功获取）的歌曲加入最终列表
     if (matchedSongs?.length) {
       songs.push(...matchedSongs);
     }

@@ -4,7 +4,7 @@ import { browserApi } from '../platform/browserApi';
 
 const logger = new Logger('Data.js');
 
-const URL_PLAY_URL = 'https://api.bilibili.com/x/player/playurl?cid={cid}&bvid={bvid}&qn=64&fnval=16';
+const URL_PLAY_URL = 'https://api.bilibili.com/x/player/playurl?cid={cid}&bvid={bvid}&qn=112&fnval=4048';
 const URL_BVID_TO_CID = 'https://api.bilibili.com/x/player/pagelist?bvid={bvid}&jsonp=jsonp';
 const URL_VIDEO_INFO = 'https://api.bilibili.com/x/web-interface/view?bvid={bvid}';
 const URL_BILISERIES_INFO =
@@ -124,14 +124,31 @@ const extractResponseJson = (json, field) => {
     const audios = json?.data?.dash?.audio || [];
     if (audios.length === 0) return '';
 
+    // 按带宽（质量）降序排序
     const ordered = [...audios].sort((a, b) => {
       const aScore = Number(a?.bandwidth || a?.id || 0);
       const bScore = Number(b?.bandwidth || b?.id || 0);
       return bScore - aScore;
     });
 
-    const preferred = ordered.find((a) => String(a?.codecs || '').includes('mp4a')) || ordered[0];
-    return preferred?.baseUrl || preferred?.base_url || preferred?.backupUrl?.[0] || preferred?.backup_url?.[0] || '';
+    const isMcdn = (url) => String(url || '').includes('mcdn.bilivideo.cn');
+
+    // 深度搜索：遍历所有音轨，寻找第一个包含非 MCDN 稳定链接的音轨
+    for (const audio of ordered) {
+      const urls = [
+        audio?.baseUrl || audio?.base_url,
+        ...(audio?.backupUrl || audio?.backup_url || []),
+      ].filter(Boolean);
+
+      const stableUrl = urls.find((url) => !isMcdn(url));
+      if (stableUrl) {
+        return stableUrl;
+      }
+    }
+
+    // 如果翻遍了所有音轨都是 MCDN，则保底选择质量最高音轨的首选链接
+    const topAudio = ordered[0];
+    return topAudio?.baseUrl || topAudio?.base_url || '';
   }
 
   if (field === 'CID') {
@@ -158,7 +175,7 @@ export const fetchPlayUrlPromise = async (bvid, cid) => {
         return;
       }
 
-      fetchBiliJson(URL_PLAY_URL.replace('{bvid}', bvid).replace('{cid}', cid))
+      fetchBiliJsonWithCredentials(URL_PLAY_URL.replace('{bvid}', bvid).replace('{cid}', cid))
         .then((json) => resolve(extractResponseJson(json, 'AudioUrl')))
         .catch((err) => {
           console.log(err);
