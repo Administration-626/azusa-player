@@ -1,4 +1,4 @@
-﻿import { getSongList } from '../background/DataProcess';
+import { getSongList } from '../background/DataProcess';
 import { v4 as uuidv4 } from 'uuid';
 import type { SearchSource } from '../background/DataProcess';
 import { fetchPlayUrlPromise } from '../utils/Data';
@@ -88,8 +88,6 @@ export default class StorageManager {
           singer: s.singer,
           singerId: s.singerId,
           cover: s.cover,
-          lyric: s.lyric,
-          lyricOffset: s.lyricOffset,
         })),
       })),
     };
@@ -376,13 +374,23 @@ export default class StorageManager {
       () => {
         if (upload.files && upload.files[0]) {
           const fileReader = new FileReader();
-          fileReader.onload = () => {
+          fileReader.onload = async () => {
             if (typeof fileReader.result === 'string') {
               const parsedJSON = JSON.parse(fileReader.result);
-              browserApi.storage.local.clear(() => {
-                browserApi.storage.local.set(parsedJSON, () => {
-                  this.initFavLists();
-                });
+              
+              // 获取当前的歌单列表ID
+              const currentFavIds = (await this.readLocalStorage(MY_FAV_LIST_KEY)) || [];
+              const importedFavIds = parsedJSON[MY_FAV_LIST_KEY] || [];
+              
+              // 增量合并：去重并保留两者的ID
+              const mergedFavIds = Array.from(new Set([...currentFavIds, ...importedFavIds]));
+              
+              const dataToSet = { ...parsedJSON };
+              dataToSet[MY_FAV_LIST_KEY] = mergedFavIds;
+              
+              // 直接 set 会覆盖相同 ID 的数据，保留不同 ID 的数据，实现了安全的合并
+              browserApi.storage.local.set(dataToSet, () => {
+                this.initFavLists();
               });
             }
           };
