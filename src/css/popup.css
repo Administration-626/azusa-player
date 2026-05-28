@@ -10,22 +10,28 @@ body,
 }
 
 :root {
-  --azusa-bg: #ffffff;
-  --azusa-fg: #2a1d4d;
-  --azusa-panel: rgba(255, 255, 255, 0.78);
-  --azusa-panel-strong: #ffffff;
-  --azusa-panel-soft: rgba(245, 239, 255, 0.9);
-  --azusa-border: rgba(171, 95, 255, 0.22);
-  --azusa-input-bg: #ffffff;
-  --azusa-input-border: rgba(124, 92, 182, 0.24);
-  --azusa-muted: rgba(86, 64, 127, 0.72);
-  --azusa-accent: #ab5fff;
+  /* 浅色模式（Premium Glassmorphism） */
+  --azusa-bg: radial-gradient(at 0% 0%, hsla(253, 56%, 95%, 1) 0px, transparent 50%),
+              radial-gradient(at 100% 0%, hsla(285, 46%, 94%, 1) 0px, transparent 50%),
+              radial-gradient(at 100% 100%, hsla(232, 56%, 93%, 1) 0px, transparent 50%),
+              radial-gradient(at 0% 100%, hsla(307, 46%, 95%, 1) 0px, transparent 50%);
+  --azusa-bg-color: #faf9fd;
+  --azusa-fg: #291c49;
+  --azusa-panel: rgba(255, 255, 255, 0.55);
+  --azusa-panel-strong: rgba(255, 255, 255, 0.9);
+  --azusa-panel-soft: rgba(255, 255, 255, 0.35);
+  --azusa-border: rgba(255, 255, 255, 0.6);
+  --azusa-input-bg: rgba(255, 255, 255, 0.6);
+  --azusa-input-border: rgba(171, 95, 255, 0.15);
+  --azusa-muted: rgba(86, 64, 127, 0.6);
+  --azusa-accent: #9643ff;
 }
 
 body {
   font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
   overflow: hidden;
-  background: var(--azusa-bg);
+  background-color: var(--azusa-bg-color);
+  background-image: var(--azusa-bg);
   color: var(--azusa-fg);
 }
 
@@ -44,7 +50,8 @@ body[data-theme='dark'] {
   --azusa-input-border: rgba(160, 136, 199, 0.22);
   --azusa-muted: rgba(212, 202, 232, 0.62);
   --azusa-accent: #b58aea;
-  background: var(--azusa-bg);
+  background-color: transparent;
+  background-image: var(--azusa-bg);
   color: var(--azusa-fg);
 }
 
@@ -79,8 +86,14 @@ body[data-theme='dark'] {
 }
 
 #FavTable {
-  box-shadow: -4px 5px 6px 2px rgb(166 88 249 / 20%),
-    4px -3px 2px 0 rgb(166 88 249 / 20%), 1px 1px 0 2px rgb(0 0 0 / 12%);
+  box-shadow: 0 12px 48px rgba(119, 85, 222, 0.08), 
+              0 4px 12px rgba(119, 85, 222, 0.04),
+              inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  backdrop-filter: blur(24px) saturate(120%);
+  background: rgba(255, 255, 255, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  transition: box-shadow 0.3s ease;
 }
 
 #LrcImg {
@@ -115,6 +128,10 @@ body[data-theme='light'] .MuiDialog-paper,
 body[data-theme='light'] .MuiMenu-paper {
   background: var(--azusa-panel);
   color: var(--azusa-fg);
+  backdrop-filter: blur(24px) saturate(120%);
+  border: 1px solid var(--azusa-border);
+  box-shadow: 0 8px 32px rgba(133, 95, 255, 0.08);
+  border-radius: 12px;
 }
 
 body[data-theme='light'] .MuiList-root,
@@ -136,6 +153,14 @@ body[data-theme='light'] .MuiInputLabel-root {
 body[data-theme='light'] .MuiOutlinedInput-root {
   color: var(--azusa-fg);
   background: var(--azusa-input-bg);
+  backdrop-filter: blur(12px);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+body[data-theme='light'] .MuiOutlinedInput-root:hover {
+  box-shadow: 0 4px 16px rgba(150, 67, 255, 0.08);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 body[data-theme='light'] .MuiOutlinedInput-notchedOutline {
@@ -166,11 +191,17 @@ body[data-theme='light'] .MuiListItemButton-root {
 
 body[data-theme='light'] .MuiListItemButton-root.Mui-selected {
   background: rgba(171, 95, 255, 0.12);
+  transform: scale(0.99);
+}
+
+body[data-theme='light'] .MuiListItemButton-root {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body[data-theme='light'] .MuiListItemButton-root.Mui-selected:hover,
 body[data-theme='light'] .MuiListItemButton-root:hover {
   background: rgba(171, 95, 255, 0.08);
+  transform: scale(0.995);
 }
 
 body[data-theme='light'] .MuiDivider-root {
