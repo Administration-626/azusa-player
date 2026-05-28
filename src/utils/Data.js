@@ -300,11 +300,6 @@ export const extractSongName = (name) => {
   return source;
 };
 
-export const getRandomHeaderGIF = () => {
-  const randomIndex = Math.floor(Math.random() * URL_HEADER_GIFS.length);
-  return URL_HEADER_GIFS[randomIndex];
-};
-
 export const searchLyricOptions = async (searchKey, setOptions) => {
   logger.info('calling searchLyricOptions');
   if (searchKey == '') {

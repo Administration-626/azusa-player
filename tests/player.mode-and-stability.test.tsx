@@ -10,7 +10,6 @@ import { createChromeMock } from './helpers/chrome-mock';
 
 let latestJkProps: any = null;
 let latestFavListProps: any = null;
-let latestLyricOverlayProps: any = null;
 
 vi.mock('react-jinke-music-player', () => ({
   default: (props: any) => {
@@ -18,7 +17,6 @@ vi.mock('react-jinke-music-player', () => ({
     return (
       <div data-testid='jk-player'>
         <button onClick={() => props.onPlayModeChange?.('shufflePlay')}>to-shuffle</button>
-        <button onClick={() => props.onCoverClick?.()}>cover-toggle</button>
       </div>
     );
   },
@@ -52,14 +50,6 @@ vi.mock('../src/components/FavList', () => ({
 }));
 
 vi.mock('../src/components/LyricOverlay', () => ({
-  LyricOverlay: (props: any) => {
-    latestLyricOverlayProps = props;
-    return props.showLyric ? (
-      <div data-testid='lyric-overlay'>
-        <button onClick={() => props.onRequestClose?.()}>close-lyric</button>
-      </div>
-    ) : null;
-  },
 }));
 
 const makeSongs = (n: number) =>
@@ -77,7 +67,6 @@ describe('Player mode and stability regression', () => {
   beforeEach(() => {
     latestJkProps = null;
     latestFavListProps = null;
-    latestLyricOverlayProps = null;
     document.body.dataset.theme = 'light';
     const { chromeMock } = createChromeMock();
     (globalThis as any).chrome = chromeMock;
@@ -246,59 +235,6 @@ describe('Player mode and stability regression', () => {
     );
 
     await screen.findByTestId('jk-player');
-
-    latestJkProps.onAudioProgress({ id: 'id-0', currentTime: 12, name: 'Song-0', singer: 'Singer', cover: 'cover' });
-
-    await user.click(screen.getByRole('button', { name: 'cover-toggle' }));
-    await waitFor(() => expect(screen.getByTestId('lyric-overlay')).toBeInTheDocument());
-
-    await user.click(screen.getByRole('button', { name: 'close-lyric' }));
-    await waitFor(() => expect(screen.queryByTestId('lyric-overlay')).not.toBeInTheDocument());
-
-    await user.click(screen.getByRole('button', { name: 'cover-toggle' }));
-    await waitFor(() => expect(screen.getByTestId('lyric-overlay')).toBeInTheDocument());
-    expect(latestLyricOverlayProps.showLyric).toBe(true);
-  });
-
-  it('throttles lyric time UI updates during rapid progress events', async () => {
-    let fakeNow = 1000;
-    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => fakeNow);
-
-    const fakeStorage = {
-      getPlayerSetting: vi.fn().mockResolvedValue({ playMode: 'order', defaultVolume: 0.5, darkMode: false }),
-      setPlayerSetting: vi.fn(),
-      setLastPlayList: vi.fn(),
-    } as any;
-
-    render(
-      <StorageManagerCtx.Provider value={fakeStorage}>
-        <Player songList={makeSongs(2) as any} />
-      </StorageManagerCtx.Provider>,
-    );
-
-    await screen.findByTestId('jk-player');
-
-    latestJkProps.onAudioProgress({ id: 'id-0', currentTime: 1, name: 'Song-0', singer: 'Singer', cover: 'cover' });
-    await waitFor(() => expect(latestLyricOverlayProps.currentTime).toBe(1));
-
-    fakeNow += 80;
-    latestJkProps.onAudioProgress({ id: 'id-0', currentTime: 1.2, name: 'Song-0', singer: 'Singer', cover: 'cover' });
-    expect(latestLyricOverlayProps.currentTime).toBe(1);
-
-    fakeNow += 220;
-    latestJkProps.onAudioProgress({ id: 'id-0', currentTime: 1.4, name: 'Song-0', singer: 'Singer', cover: 'cover' });
-    await waitFor(() => expect(latestLyricOverlayProps.currentTime).toBe(1.4));
-
-    nowSpy.mockRestore();
-  });
-
-  it('clears legacy progress data and no longer persists playback progress', async () => {
-    const { chromeMock } = createChromeMock({
-      SongProgressMap: { 'id-1': 98 },
-    });
-    (globalThis as any).chrome = chromeMock;
-
-    const fakeStorage = {
       getPlayerSetting: vi.fn().mockResolvedValue({ playMode: 'order', defaultVolume: 0.5, darkMode: false }),
       setPlayerSetting: vi.fn(),
       setLastPlayList: vi.fn(),

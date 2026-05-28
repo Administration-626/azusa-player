@@ -4,7 +4,6 @@ import '../css/react-jinke-player.css';
 import Box from '@mui/material/Box';
 import { FavList } from './FavList';
 import { BiliBiliIcon } from './bilibiliIcon';
-import { LyricOverlay } from './LyricOverlay';
 import StorageManagerCtx from '../popup/App';
 import { browserApi } from '../platform/browserApi';
 
@@ -106,7 +105,6 @@ export const Player = function ({ songList }: PlayerProps) {
   const [currentAudioInst, setCurrentAudioInst] = useState<any>(null);
   const [pendingImmediatePlayId, setPendingImmediatePlayId] = useState<string | null>(null);
   const [pendingImmediatePlayTick, setPendingImmediatePlayTick] = useState(0);
-  const [showLyric, setShowLyric] = useState(false);
   const [playerSettings, setPlayerSettings] = useState<PlayerSettings | null>(null);
   const lastLyricUiSyncAtRef = useRef(0);
   const currentTrackRef = useRef<CurrentAudioView | null>(null);
@@ -553,12 +551,6 @@ export const Player = function ({ songList }: PlayerProps) {
     };
   }, []);
 
-  useEffect(() => {
-    if (showLyric && !currentAudio) {
-      setShowLyric(false);
-    }
-  }, [showLyric, currentAudio]);
-
   const onDarkModeChange = useCallback(
     (darkMode: boolean) => {
       if (!playerSettings) return;
@@ -569,14 +561,6 @@ export const Player = function ({ songList }: PlayerProps) {
     },
     [playerSettings, StorageManager],
   );
-
-  const onCoverToggle = useCallback(() => {
-    const activeElement = document.activeElement;
-    if (activeElement instanceof HTMLElement) {
-      activeElement.blur();
-    }
-    setShowLyric((v) => !v);
-  }, []);
 
   const playerStateQueue = JSON.stringify((params?.audioLists || []).map((song: SongLike) => String(song.id)));
 
@@ -617,18 +601,6 @@ export const Player = function ({ songList }: PlayerProps) {
         />
       ) : null}
 
-      {currentAudio ? (
-        <LyricOverlay
-          showLyric={showLyric}
-          onRequestClose={() => setShowLyric(false)}
-          currentTime={lyricCurrentTime}
-          audioName={currentAudio.name}
-          audioId={currentAudio.id}
-          artist={currentAudio.singer}
-          audioCover={currentAudio.cover}
-        />
-      ) : null}
-
       {params ? (
         <Box display='flex' flex='1' justifyContent='space-around' sx={{ gridArea: 'footer', height: '84px', width: '100%' }}>
           <ReactJkMusicPlayer
@@ -641,7 +613,6 @@ export const Player = function ({ songList }: PlayerProps) {
             onAudioProgress={onAudioProgress}
             getAudioInstance={getAudioInstance}
             onAudioPlay={onAudioPlay}
-            onCoverClick={onCoverToggle}
             onAudioListsChange={onAudioListsChange}
           />
         </Box>

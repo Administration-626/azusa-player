@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { getRandomHeaderGIF } from '../utils/Data';
 import { ScrollBar } from '../styles/styles';
 import { styled } from '@mui/material/styles';
 import PropTypes from 'prop-types';
@@ -244,7 +243,6 @@ export const Fav = function ({
               </Grid>
               <Grid item xs={12} sm={7} md={6}>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
-                  <img style={{ width: '40px', height: '40px' }} src={getRandomHeaderGIF()} alt='header' />
                   <TextField
                     id='fav-search'
                     color='secondary'
