@@ -42,6 +42,7 @@ const options = {
   autoPlayInitLoadPlayList: true,
   autoPlay: false,
   defaultPlayIndex: 0,
+  defaultCover: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
 };
 
 const LYRIC_UI_SYNC_INTERVAL_MS = 180;
@@ -605,6 +606,7 @@ export const Player = function ({ songList }: PlayerProps) {
         <Box display='flex' flex='1' justifyContent='space-around' sx={{ gridArea: 'footer', height: '84px', width: '100%' }}>
           <ReactJkMusicPlayer
             {...params}
+            audioLists={(params.audioLists || []).map((song: any) => ({ ...song, cover: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' }))}
             showMediaSession
             onAudioVolumeChange={onAudioVolumeChange}
             onPlayModeChange={onPlayModeChange}

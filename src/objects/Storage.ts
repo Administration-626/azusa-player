@@ -87,7 +87,7 @@ export default class StorageManager {
           name: s.name,
           singer: s.singer,
           singerId: s.singerId,
-          cover: s.cover,
+          cover: '',
         })),
       })),
     };
