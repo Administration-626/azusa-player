@@ -158,15 +158,12 @@ const fetchSongsByBvidMap = async (bvids: string[]): Promise<Map<string, Song[]>
   const uniqueBvids = Array.from(new Set(bvids.filter(Boolean)));
   const entries = await Promise.all(
     uniqueBvids.map(async (bvid) => {
-      const songs = await getSongList(bvid);
-      if (!songs.length) {
-        throw new Error(`Failed to load source video ${bvid}.`);
-      }
+      const songs = await getSongList(bvid).catch(() => []);
       return [bvid, songs] as const;
     }),
   );
 
-  return new Map(entries);
+  return new Map(entries.filter(([, songs]) => songs.length > 0));
 };
 
 const rebuildSongsFromSourceBvids = async (sourceBvids: string[], existingSongs: SongLike[] = []): Promise<Song[]> => {
@@ -178,10 +175,9 @@ const rebuildSongsFromSourceBvids = async (sourceBvids: string[], existingSongs:
   const songs: Song[] = [];
   for (const bvid of orderedBvids) {
     const matchedSongs = existingByBvid.get(bvid) || fetchedByBvid.get(bvid);
-    if (!matchedSongs?.length) {
-      throw new Error('Failed to load the complete source playlist.');
+    if (matchedSongs?.length) {
+      songs.push(...matchedSongs);
     }
-    songs.push(...matchedSongs);
   }
 
   return songs;
