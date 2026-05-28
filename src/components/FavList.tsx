@@ -75,7 +75,7 @@ interface FavListProps {
   darkMode?: boolean;
   onDarkModeChange?: (darkMode: boolean) => void;
   onSongListChange?: (songs: any[]) => void;
-  onPlayOneFromFav: (songs: any[]) => void;
+  onPlayOneFromFav: (songs: any[], targetSongId?: string) => void;
   onPlayAllFromFav: (songs: any[]) => void;
   onAddFavToList: (songs: any[]) => void;
   onAddOneFromFav: (songs: any[]) => void;

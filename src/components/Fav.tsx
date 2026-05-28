@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getRandomHeaderGIF } from '../utils/Data';
 import { ScrollBar } from '../styles/styles';
 import { styled } from '@mui/material/styles';
@@ -51,7 +51,7 @@ interface FavProps {
   FavList: FavLike;
   currentAudioId?: string;
   onSongListChange?: (songs: any[]) => void;
-  onSongIndexChange: (songs: any[]) => void;
+  onSongIndexChange: (songs: any[], targetSongId?: string) => void;
   onAddOneFromFav: (songs: any[]) => void;
   onRefreshFromSource?: (list: any) => void;
   refreshInProgress?: boolean;
@@ -364,7 +364,7 @@ export const Fav = function ({
                         <Button
                           variant='text'
                           sx={{ ...songText, width: '100%', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                          onClick={() => onSongIndexChange([song])}
+                          onClick={() => onSongIndexChange(currentFavList.songList, song.id)}
                         >
                           {song.name}
                         </Button>

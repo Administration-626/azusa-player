@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback, useContext, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useContext, useRef } from 'react';
 import ReactJkMusicPlayer from 'react-jinke-music-player';
 import '../css/react-jinke-player.css';
 import Box from '@mui/material/Box';
@@ -225,24 +225,18 @@ export const Player = function ({ songList }: PlayerProps) {
   );
 
   const onPlayOneFromFav = useCallback(
-    (songs: any[]) => {
+    (songs: any[], targetSongId?: string) => {
       if (!songs?.length) return;
+      const targetId = targetSongId || String(songs[0].id);
+      
       console.info('[azusa-player][play]', 'onPlayOneFromFav', {
-        requestedSongId: String(songs[0].id),
+        requestedSongId: targetId,
         currentTrackId: currentTrackRef.current?.id || null,
         playingListCount: playingList.length,
       });
-      const existingIndex = playingList.findIndex((s) => s.id == songs[0].id);
-      if (existingIndex !== -1 && currentAudioInstRef.current?.playByIndex) {
-        setPendingImmediatePlayId(null);
-        setPendingImmediatePlayTick(0);
-        pendingImmediatePlayIndexRef.current = existingIndex;
-        pendingImmediatePlayAttemptsRef.current = 0;
-        currentAudioInstRef.current.playByIndex(existingIndex);
-        return;
-      }
+
       pendingImmediatePlayAttemptsRef.current = 0;
-      applyAudioListUpdate({ songs, immediatePlay: true, preferredSongId: String(songs[0].id) });
+      applyAudioListUpdate({ songs, immediatePlay: true, replaceList: true, preferredSongId: targetId });
     },
     [playingList, applyAudioListUpdate],
   );
@@ -257,7 +251,8 @@ export const Player = function ({ songList }: PlayerProps) {
 
   const onPlayAllFromFav = useCallback(
     (songs: any[]) => {
-      applyAudioListUpdate({ songs, immediatePlay: false, replaceList: true });
+      if (!songs?.length) return;
+      applyAudioListUpdate({ songs, immediatePlay: true, replaceList: true, preferredSongId: String(songs[0].id) });
     },
     [applyAudioListUpdate],
   );
