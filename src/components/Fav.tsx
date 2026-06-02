@@ -100,6 +100,11 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
   },
 }));
 
+const getSongSearchText = (song: SongLike) =>
+  [song.name, song.singer, song.bvid, song.id, song.singerId]
+    .map((value) => String(value || '').toLowerCase())
+    .join(' ');
+
 function TablePaginationActions(props: any) {
   const theme = useTheme();
   const { count, page, rowsPerPage, onPageChange } = props;
@@ -168,19 +173,23 @@ export const Fav = function ({
     setRowsPerPage(currentInfo.rowsPerPage ?? 25);
     setHighlightSongId(String(currentInfo.highlightSongId || ''));
     setHighlightNonce(Number(currentInfo.highlightNonce || 0));
-    requestSearch(currentInfo.highlightSongId ? '' : (currentInfo.filterString ?? ''));
+    requestSearch(currentInfo.highlightSongId ? '' : (currentInfo.filterString ?? ''), false);
     setSelectedSongIds([]);
   }, [FavList]);
 
-  const requestSearch = (searchedVal: string) => {
+  const requestSearch = (searchedVal: string, resetPage = true) => {
     setFilterString(searchedVal);
-    if (!searchedVal) {
-      setRows(FavList.songList);
+    if (resetPage) {
+      setPage(0);
+    }
+
+    const query = searchedVal.trim().toLowerCase();
+    if (!query) {
+      setRows(FavList.songList || []);
       return;
     }
 
-    const lowered = searchedVal.toLowerCase();
-    setRows((FavList.songList || []).filter((row) => String(row.name).toLowerCase().includes(lowered)));
+    setRows((FavList.songList || []).filter((row) => getSongSearchText(row).includes(query)));
   };
 
   const visibleRows = useMemo(

@@ -35,9 +35,13 @@ describe('Fav table user interactions', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Song One' }));
-    expect(onSongIndexChange).toHaveBeenCalledWith([
-      expect.objectContaining({ id: 's1', name: 'Song One' }),
-    ]);
+    expect(onSongIndexChange).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ id: 's1', name: 'Song One' }),
+        expect.objectContaining({ id: 's2', name: 'Song Two' }),
+      ],
+      's1',
+    );
 
     const checkboxes = screen.getAllByRole('checkbox');
     await user.click(checkboxes[1]);
@@ -105,5 +109,54 @@ describe('Fav table user interactions', () => {
 
     expect(await screen.findByRole('button', { name: 'Song One' })).toBeInTheDocument();
     expect(screen.getByDisplayValue('')).toBeInTheDocument();
+  });
+
+  it('shows matching songs when searching from a later page', async () => {
+    const user = userEvent.setup();
+    const songList = [
+      ...Array.from({ length: 25 }, (_, index) => ({
+        id: `page-one-${index}`,
+        name: `Page One Song ${index}`,
+        singer: 'First Page UP',
+        singerId: '1',
+        bvid: `BV_PAGE_ONE_${index}`,
+      })),
+      { id: 'target-song', name: 'Needle Song', singer: 'Target UP', singerId: '2', bvid: 'BV_NEEDLE' },
+    ];
+
+    render(
+      <Fav
+        FavList={{
+          info: { id: 'FavList-1', title: '测试歌单', currentTableInfo: { page: 1, rowsPerPage: 25 } },
+          songList,
+        } as any}
+        onSongIndexChange={vi.fn()}
+        onAddOneFromFav={vi.fn()}
+        handleDelteFromSearchList={vi.fn()}
+        handleAddToFavClick={vi.fn()}
+        handleDeleteSongs={vi.fn()}
+        handleRenameSong={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Needle Song' })).toBeInTheDocument();
+
+    const input = screen.getByLabelText('搜索歌曲');
+    await user.type(input, 'Needle');
+
+    expect(await screen.findByRole('button', { name: 'Needle Song' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Page One Song 0' })).not.toBeInTheDocument();
+
+    await user.clear(input);
+    await user.type(input, 'Target UP');
+    expect(await screen.findByRole('button', { name: 'Needle Song' })).toBeInTheDocument();
+
+    await user.clear(input);
+    await user.type(input, 'BV_NEEDLE');
+    expect(await screen.findByRole('button', { name: 'Needle Song' })).toBeInTheDocument();
+
+    await user.clear(input);
+    await user.type(input, 'target-song');
+    expect(await screen.findByRole('button', { name: 'Needle Song' })).toBeInTheDocument();
   });
 });
