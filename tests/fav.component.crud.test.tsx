@@ -122,6 +122,7 @@ describe('Fav table user interactions', () => {
         bvid: `BV_PAGE_ONE_${index}`,
       })),
       { id: 'target-song', name: 'Needle Song', singer: 'Target UP', singerId: '2', bvid: 'BV_NEEDLE' },
+      { id: 'cache-song', name: 'Cache Probe', singer: 'Cache UP', singerId: '3', bvid: 'BV_CACHE' },
     ];
 
     render(
@@ -158,5 +159,10 @@ describe('Fav table user interactions', () => {
     await user.clear(input);
     await user.type(input, 'target-song');
     expect(await screen.findByRole('button', { name: 'Needle Song' })).toBeInTheDocument();
+
+    await user.clear(input);
+    await user.type(input, 'Cache');
+    expect(await screen.findByRole('button', { name: 'Cache Probe' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Needle Song' })).not.toBeInTheDocument();
   });
 });

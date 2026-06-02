@@ -119,6 +119,50 @@ test.describe('popup e2e', () => {
     await expect(page.getByRole('button', { name: 'Series Song 1' })).toBeVisible();
   });
 
+  test('filters current playlist songs immediately without stale search results', async ({ page }) => {
+    const songList = [
+      ...Array.from({ length: 25 }, (_, index) => ({
+        id: `page-one-${index}`,
+        bvid: `BV_PAGE_ONE_${index}`,
+        name: `Page One Song ${index}`,
+        singer: 'First Page UP',
+        singerId: '1001',
+        cover: 'cover',
+      })),
+      { id: 'target-song', bvid: 'BV_NEEDLE', name: 'Needle Song', singer: 'Target UP', singerId: '1002', cover: 'cover' },
+      { id: 'cache-song', bvid: 'BV_CACHE', name: 'Cache Probe', singer: 'Cache UP', singerId: '1003', cover: 'cover' },
+    ];
+
+    await page.evaluate(() => window.localStorage.clear());
+    await openPopup(page, {
+      state: {
+        MyFavList: ['FavList-default'],
+        'FavList-default': {
+          info: { id: 'FavList-default', title: 'Azusa Test Playlist', currentTableInfo: { page: 1, rowsPerPage: 25 } },
+          songList,
+        },
+        LastPlayList: [songList[0]],
+        PlayerSetting: {
+          playMode: 'order',
+          defaultVolume: 0.5,
+          darkMode: false,
+          selectedFavId: 'FavList-default',
+          lyricFontSize: 16,
+        },
+      },
+      replaceExistingState: true,
+    });
+
+    const favSearch = page.locator('#fav-search');
+    await favSearch.fill('Needle');
+    await expect(page.getByRole('button', { name: 'Needle Song' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Page One Song 0' })).toBeHidden();
+
+    await favSearch.fill('Cache');
+    await expect(page.getByRole('button', { name: 'Cache Probe' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Needle Song' })).toBeHidden();
+  });
+
   test('shows help and unsupported-input empty state', async ({ page }) => {
     await page.getByTestId('search-help-button').click();
     await expect(page.getByRole('dialog')).toContainText('BVID');

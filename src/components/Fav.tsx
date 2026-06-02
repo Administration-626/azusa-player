@@ -154,8 +154,6 @@ export const Fav = function ({
   handleDeleteSongs,
   handleRenameSong,
 }: FavProps) {
-  const [currentFavList, setCurrentFavList] = useState<FavLike | null>(null);
-  const [rows, setRows] = useState<SongLike[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [filterString, setFilterString] = useState('');
@@ -165,31 +163,32 @@ export const Fav = function ({
   const rowRefs = React.useRef<Record<string, HTMLTableRowElement | null>>({});
 
   useEffect(() => {
-    setCurrentFavList(FavList);
-    setRows(FavList.songList || []);
-
     const currentInfo = FavList.info.currentTableInfo || {};
     setPage(currentInfo.page ?? 0);
     setRowsPerPage(currentInfo.rowsPerPage ?? 25);
     setHighlightSongId(String(currentInfo.highlightSongId || ''));
     setHighlightNonce(Number(currentInfo.highlightNonce || 0));
-    requestSearch(currentInfo.highlightSongId ? '' : (currentInfo.filterString ?? ''), false);
+    setFilterString(currentInfo.highlightSongId ? '' : (currentInfo.filterString ?? ''));
     setSelectedSongIds([]);
   }, [FavList]);
 
-  const requestSearch = (searchedVal: string, resetPage = true) => {
+  const rows = useMemo(() => {
+    const query = filterString.trim().toLowerCase();
+    if (!query) return FavList.songList || [];
+    return (FavList.songList || []).filter((row) => getSongSearchText(row).includes(query));
+  }, [FavList.songList, filterString]);
+
+  useEffect(() => {
+    if (rowsPerPage <= 0) return;
+    const maxPage = Math.max(0, Math.ceil(rows.length / rowsPerPage) - 1);
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [page, rows.length, rowsPerPage]);
+
+  const requestSearch = (searchedVal: string) => {
     setFilterString(searchedVal);
-    if (resetPage) {
-      setPage(0);
-    }
-
-    const query = searchedVal.trim().toLowerCase();
-    if (!query) {
-      setRows(FavList.songList || []);
-      return;
-    }
-
-    setRows((FavList.songList || []).filter((row) => getSongSearchText(row).includes(query)));
+    setPage(0);
   };
 
   const visibleRows = useMemo(
@@ -201,8 +200,8 @@ export const Fav = function ({
   const resolvedCurrentSongId = String(currentAudioId || '');
 
   const selectedSongs = useMemo(
-    () => (currentFavList?.songList || []).filter((s) => selectedSongIds.includes(s.id)),
-    [selectedSongIds, currentFavList],
+    () => (FavList.songList || []).filter((s) => selectedSongIds.includes(s.id)),
+    [selectedSongIds, FavList.songList],
   );
 
   useEffect(() => {
@@ -220,7 +219,7 @@ export const Fav = function ({
     });
     if (!highlightedRow || typeof highlightedRow.scrollIntoView !== 'function') return;
     highlightedRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [resolvedHighlightSongId, highlightNonce, page, rowsPerPage, rows]);
+  }, [resolvedHighlightSongId, resolvedCurrentSongId, highlightNonce, page, rowsPerPage, visibleRows]);
 
   const toggleSong = (songId: string) => {
     setSelectedSongIds((prev) => (prev.includes(songId) ? prev.filter((id) => id !== songId) : [...prev, songId]));
@@ -241,13 +240,13 @@ export const Fav = function ({
 
   return (
     <>
-      {currentFavList ? (
+      {FavList ? (
         <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
           <Box sx={{ px: { xs: 0.5, md: 1 }, pt: 0.5 }}>
             <Grid container spacing={1} alignItems='center'>
               <Grid item xs={12} sm={5} md={6}>
                 <Typography variant='h6' sx={{ color: 'var(--azusa-fg)', whiteSpace: 'nowrap', fontSize: '1rem', opacity: 0.9 }}>
-                  {currentFavList.info.title}
+                  {FavList.info.title}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={7} md={6}>
@@ -277,7 +276,7 @@ export const Fav = function ({
                       <Button
                         size='small'
                         disabled={!selectedSongs.length}
-                        onClick={() => handleAddToFavClick(currentFavList.info.id, selectedSongs)}
+                        onClick={() => handleAddToFavClick(FavList.info.id, selectedSongs)}
                       >
                         添加到歌单
                       </Button>
@@ -289,16 +288,16 @@ export const Fav = function ({
                         size='small'
                         color='error'
                         disabled={!selectedSongs.length}
-                        onClick={() => handleDeleteSongs(currentFavList.info.id, selectedSongIds, tableInfo)}
+                        onClick={() => handleDeleteSongs(FavList.info.id, selectedSongIds, tableInfo)}
                       >
                         删除选中
                       </Button>
                     </span>
                   </Tooltip>
-                  {currentFavList.info.source ? (
+                  {FavList.info.source ? (
                     <Tooltip title='按原始来源刷新歌单'>
                       <span>
-                        <Button size='small' disabled={refreshInProgress} onClick={() => onRefreshFromSource?.(currentFavList)}>
+                        <Button size='small' disabled={refreshInProgress} onClick={() => onRefreshFromSource?.(FavList)}>
                           {refreshInProgress ? '刷新中' : '刷新来源'}
                         </Button>
                       </span>
@@ -328,7 +327,7 @@ export const Fav = function ({
                       ) : (
                         <>
                           {column.label}
-                          {column.id === 'name' ? ` (${currentFavList.songList.length})` : ''}
+                          {column.id === 'name' ? ` (${FavList.songList.length})` : ''}
                         </>
                       )}
                     </TableCell>
@@ -371,7 +370,7 @@ export const Fav = function ({
                         <Button
                           variant='text'
                           sx={{ ...songText, width: '100%', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                          onClick={() => onSongIndexChange(currentFavList.songList, song.id)}
+                          onClick={() => onSongIndexChange(FavList.songList, song.id)}
                         >
                           {song.name}
                         </Button>
@@ -391,7 +390,7 @@ export const Fav = function ({
                           <AddOutlinedIcon sx={CRUDIcon} onClick={() => onAddOneFromFav([song])} />
                         </Tooltip>
                         <Tooltip title='添加到歌单'>
-                          <AddBoxOutlinedIcon sx={CRUDIcon} onClick={() => handleAddToFavClick(currentFavList.info.id, [song])} />
+                          <AddBoxOutlinedIcon sx={CRUDIcon} onClick={() => handleAddToFavClick(FavList.info.id, [song])} />
                         </Tooltip>
                         <Tooltip title='重命名歌曲'>
                           <EditOutlinedIcon
@@ -399,7 +398,7 @@ export const Fav = function ({
                             onClick={() => {
                               const newName = window.prompt('请输入新歌名', song.name);
                               if (newName && newName.trim()) {
-                                handleRenameSong(currentFavList.info.id, song.id, newName.trim(), tableInfo);
+                                handleRenameSong(FavList.info.id, song.id, newName.trim(), tableInfo);
                               }
                             }}
                           />
@@ -407,7 +406,7 @@ export const Fav = function ({
                         <Tooltip title='删除歌曲'>
                           <DeleteOutlineOutlinedIcon
                             sx={CRUDIcon}
-                            onClick={() => handleDelteFromSearchList(currentFavList.info.id, song.id, tableInfo)}
+                            onClick={() => handleDelteFromSearchList(FavList.info.id, song.id, tableInfo)}
                           />
                         </Tooltip>
                       </Box>
