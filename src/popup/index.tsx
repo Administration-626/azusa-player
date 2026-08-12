@@ -3,6 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { App } from "./App";
 import "../css/popup.css";
 
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => event.preventDefault());
+  window.addEventListener('unhandledrejection', (event) => event.preventDefault());
+}
+
 try {
     console.log(
         `%c azusa-player %c v${__APP_VERSION__} %c Commit: ${__COMMIT_HASH__} %c Build: ${__BUILD_TIME__} `,

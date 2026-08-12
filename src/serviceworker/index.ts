@@ -2,6 +2,11 @@ import { getSongsFromSource, type SearchSource } from '../background/DataProcess
 import { parseSearchSource, type ContextTargetPayload } from '../utils/searchSource';
 import { fetchSongsBySource } from '../api/bilibili/fetchSongsBySource';
 
+if (typeof self !== 'undefined') {
+  self.addEventListener('error', (event) => event.preventDefault());
+  self.addEventListener('unhandledrejection', (event) => event.preventDefault());
+}
+
 chrome.action.onClicked.addListener(() => {
   chrome.runtime.openOptionsPage();
 });
