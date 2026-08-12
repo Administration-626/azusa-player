@@ -372,19 +372,25 @@
   font-size: 24px;
 }
 .react-jinke-music-player-main .translate {
-  animation: translate 0.35s cubic-bezier(0.43, -0.1, 0.16, 1.1) forwards;
+  animation: translate 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .react-jinke-music-player-main .scale {
   animation: scaleTo 0.35s cubic-bezier(0.43, -0.1, 0.16, 1.1) forwards;
 }
 @keyframes playing {
+  0% {
+    transform: rotate(0deg);
+  }
   to {
-    transform: rotateX(1turn);
+    transform: rotate(1turn);
   }
 }
 @keyframes coverReset {
-  to {
+  0% {
     transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(1turn);
   }
 }
 @keyframes audioLoading {
@@ -399,32 +405,23 @@
   0% {
     transform: scale(0);
   }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.5);
-  }
   to {
-    opacity: 0;
-    transform: scale(2);
+    transform: scale(1);
   }
 }
 @keyframes scaleTo {
   0% {
-    opacity: 0;
     transform: scale(0);
   }
   to {
-    opacity: 1;
     transform: scale(1);
   }
 }
 @keyframes scaleFrom {
   0% {
-    opacity: 1;
     transform: scale(1);
   }
   to {
-    opacity: 0;
     transform: scale(0);
   }
 }
@@ -438,46 +435,52 @@
 }
 @keyframes fromTo {
   0% {
-    transform: scale(1) translate3d(0, 110%, 0);
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
   }
   to {
-    transform: scale(1) translateZ(0);
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
 }
 @keyframes fromOut {
   0% {
-    transform: scale(1) translateZ(0);
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
   to {
-    transform: scale(1) translate3d(0, 110%, 0);
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
   }
 }
 @keyframes fromDown {
   0% {
-    transform: scale(1) translate3d(0, -110%, 0);
+    opacity: 0;
+    transform: translate3d(0, -16px, 0);
   }
   to {
-    transform: scale(1) translateZ(0);
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
 }
 @keyframes translate {
   0% {
     opacity: 0;
-    transform: translate3d(100%, 0, 0);
+    transform: translate3d(0, 16px, 0);
   }
   to {
     opacity: 1;
-    transform: translateZ(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 @keyframes remove {
   0% {
     opacity: 1;
-    transform: translateZ(0);
+    transform: translate3d(0, 0, 0);
   }
   to {
     opacity: 0;
-    transform: translate3d(-100%, 0, 0);
+    transform: translate3d(0, 16px, 0);
   }
 }
 .react-jinke-music-player-main .img-rotate-pause {
