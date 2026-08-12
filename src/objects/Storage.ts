@@ -205,8 +205,8 @@ export default class StorageManager {
         if (found) favListsSorted.push(found);
       });
 
-      this.notify();
       this.latestFavLists = favListsSorted;
+      this.notify();
     });
   }
 
@@ -221,30 +221,29 @@ export default class StorageManager {
         [value.info.id]: value,
         [LAST_PLAY_LIST]: [],
         [LYRIC_MAPPING]: [],
+        [MY_FAV_LIST_KEY]: [value.info.id],
       },
       () => {
-        browserApi.storage.local.set({ [MY_FAV_LIST_KEY]: [value.info.id] }, () => {
-          this.notify();
-          this.latestFavLists = [value];
-          this.queueSyncFavListsToCloud();
+        this.latestFavLists = [value];
+        this.notify();
+        this.queueSyncFavListsToCloud();
 
-          if (isExtensionRuntime()) {
-            browserApi.runtime.sendMessage({
-              type: 'fav-lists-change',
-              data: this.latestFavLists.map((v) => v.info),
-            });
-          }
-        });
+        if (isExtensionRuntime()) {
+          browserApi.runtime.sendMessage({
+            type: 'fav-lists-change',
+            data: this.latestFavLists.map((v) => v.info),
+          });
+        }
       },
     );
   }
 
   deleteFavList(id: string, newFavLists: PlayList[]) {
+    this.latestFavLists = newFavLists;
+    const newFavListIds = newFavLists.map((v) => v.info.id);
     browserApi.storage.local.remove(id, () => {
-      const newFavListIds = newFavLists.map((v) => v.info.id);
       browserApi.storage.local.set({ [MY_FAV_LIST_KEY]: newFavListIds }, () => {
         this.notify();
-        this.latestFavLists = newFavLists;
         this.queueSyncFavListsToCloud();
 
         if (isExtensionRuntime()) {
@@ -268,9 +267,13 @@ export default class StorageManager {
       this.notify();
     }
 
-    browserApi.storage.local.set({ [value.info.id]: value }, () => {
-      const newListIDs = this.latestFavLists.map((v) => v.info.id);
-      browserApi.storage.local.set({ [MY_FAV_LIST_KEY]: newListIDs }, () => {
+    const newListIDs = this.latestFavLists.map((v) => v.info.id);
+    browserApi.storage.local.set(
+      {
+        [value.info.id]: value,
+        [MY_FAV_LIST_KEY]: newListIDs,
+      },
+      () => {
         this.notify();
         this.queueSyncFavListsToCloud();
 
@@ -280,28 +283,35 @@ export default class StorageManager {
             data: this.latestFavLists.map((v) => v.info),
           });
         }
-      });
-    });
+      },
+    );
     return value;
   }
 
   updateFavList(updatedToList: PlayList) {
-    browserApi.storage.local.set({ [updatedToList.info.id]: updatedToList }, () => {
-      const index = this.latestFavLists.findIndex((f) => f.info.id == updatedToList.info.id);
-      const hydratedList = {
-        info: { ...updatedToList.info },
-        songList: this.hydrateSongs(updatedToList.songList as any),
-      };
+    const index = this.latestFavLists.findIndex((f) => f.info.id == updatedToList.info.id);
+    const hydratedList = {
+      info: { ...updatedToList.info },
+      songList: this.hydrateSongs(updatedToList.songList as any),
+    };
 
-      if (index !== -1) {
-        this.latestFavLists[index] = hydratedList;
-      } else {
-        this.latestFavLists.push(hydratedList);
-      }
+    if (index !== -1) {
+      this.latestFavLists[index] = hydratedList;
+    } else {
+      this.latestFavLists.push(hydratedList);
+    }
 
-      this.notify();
-      this.queueSyncFavListsToCloud();
-    });
+    const newListIDs = this.latestFavLists.map((v) => v.info.id);
+    browserApi.storage.local.set(
+      {
+        [updatedToList.info.id]: updatedToList,
+        [MY_FAV_LIST_KEY]: newListIDs,
+      },
+      () => {
+        this.notify();
+        this.queueSyncFavListsToCloud();
+      },
+    );
   }
 
   /** 从 storage 读取最新歌单数据并同步到内存（用于 fav-update 消息） */

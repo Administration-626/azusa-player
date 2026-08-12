@@ -323,11 +323,6 @@ export const Player = function ({ songList }: PlayerProps) {
   const onAudioPlay = useCallback(
     (audioInfo?: SongLike) => {
       if (!params || !audioInfo?.id) return;
-      console.info('[azusa-player][play]', 'onAudioPlay', {
-        audioId: String(audioInfo.id),
-        audioName: audioInfo.name,
-        pendingImmediatePlayId,
-      });
       const trackChanged = syncCurrentTrack(audioInfo);
       if (trackChanged) {
         setLyricCurrentTime(0);
@@ -344,8 +339,9 @@ export const Player = function ({ songList }: PlayerProps) {
       }
       lastLyricUiSyncAtRef.current = 0;
       setParams({ ...params, extendsContent: buildExternalLink(audioInfo) });
+      const serializablePlayUrl = typeof audioInfo.musicSrc === 'string' ? audioInfo.musicSrc : '';
       browserApi.storage.local.set({
-        CurrentPlaying: { cid: String(audioInfo.id), playUrl: audioInfo.musicSrc },
+        CurrentPlaying: { cid: String(audioInfo.id), playUrl: serializablePlayUrl },
       });
     },
     [params, syncCurrentTrack, pendingImmediatePlayId],

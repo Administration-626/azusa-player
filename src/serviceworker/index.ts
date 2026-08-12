@@ -282,6 +282,15 @@ const requestMenuRender = (favListsInfo: FavInfo[]) => {
   })();
 };
 
+let menuRenderTimer: ReturnType<typeof setTimeout> | null = null;
+const debouncedRequestMenuRender = (favInfos: FavInfo[]) => {
+  if (menuRenderTimer) clearTimeout(menuRenderTimer);
+  menuRenderTimer = setTimeout(() => {
+    menuRenderTimer = null;
+    requestMenuRender(favInfos);
+  }, 300);
+};
+
 const loadFavMenuInfos = () => {
   chrome.storage.local.get(MY_FAV_LIST_KEY, (result) => {
     const favListKeys: string[] = result[MY_FAV_LIST_KEY] || [];
@@ -304,7 +313,7 @@ loadFavMenuInfos();
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === 'fav-lists-change') {
-    requestMenuRender(Array.isArray(message.data) ? message.data.filter(isFavInfo) : []);
+    debouncedRequestMenuRender(Array.isArray(message.data) ? message.data.filter(isFavInfo) : []);
   }
 });
 

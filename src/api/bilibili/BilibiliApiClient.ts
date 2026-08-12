@@ -181,22 +181,39 @@ export class BilibiliApiClient {
     );
   }
 
+  private async fetchVideoInfosChunked(bvids: string[], chunkSize = 5): Promise<(VideoInfo | undefined)[]> {
+    const results: (VideoInfo | undefined)[] = [];
+    for (let i = 0; i < bvids.length; i += chunkSize) {
+      const chunk = bvids.slice(i, i + chunkSize);
+      const chunkResults = await Promise.all(
+        chunk.map((bvid) =>
+          this.fetchVideoInfo(bvid).catch((err) => {
+            console.warn('[azusa-player][bilibili-api] fetchVideoInfo failed for bvid:', bvid, err);
+            return undefined;
+          }),
+        ),
+      );
+      results.push(...chunkResults);
+    }
+    return results;
+  }
+
   /** 获取收藏夹中所有视频的 VideoInfo */
   async fetchFavList(mid: string): Promise<(VideoInfo | undefined)[]> {
     const bvids = await this.fetchFavBvids(mid);
-    return Promise.all(bvids.map((bvid) => this.fetchVideoInfo(bvid)));
+    return this.fetchVideoInfosChunked(bvids);
   }
 
   /** 获取 series 中所有视频的 VideoInfo */
   async fetchBiliSeriesInfo(mid: string, sid: string): Promise<(VideoInfo | undefined)[]> {
     const bvids = await this.fetchBiliSeriesBvids(mid, sid);
-    return Promise.all(bvids.map((bvid) => this.fetchVideoInfo(bvid)));
+    return this.fetchVideoInfosChunked(bvids);
   }
 
   /** 获取合集（season）中所有视频的 VideoInfo */
   async fetchBiliColleList(mid: string, sid: string, favList: string[] = []): Promise<(VideoInfo | undefined)[]> {
     const bvids = await this.fetchBiliColleBvids(mid, sid, favList);
-    return Promise.all(bvids.map((bvid) => this.fetchVideoInfo(bvid)));
+    return this.fetchVideoInfosChunked(bvids);
   }
 
   // ══════════════════════════════════════════════════════════

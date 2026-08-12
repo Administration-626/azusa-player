@@ -176,4 +176,48 @@ describe('StorageManager CRUD regression', () => {
 
     warnSpy.mockRestore();
   });
+
+  it('notifies subscribers with populated fav lists when loaded from storage on init', async () => {
+    const manager = StorageManager.getInstance();
+    (manager as any).latestFavLists = [];
+
+    const mockFavId = 'FavList-test-123';
+    const mockList = {
+      info: { title: 'Saved List', id: mockFavId },
+      songList: [],
+    };
+    await new Promise<void>((resolve) => {
+      chrome.storage.local.set({ MyFavList: [mockFavId], [mockFavId]: mockList }, () => resolve());
+    });
+
+    const receivedSnapshots: any[][] = [];
+    manager.subscribe((lists) => {
+      receivedSnapshots.push(lists);
+    });
+
+    await manager.initFavLists();
+    await tick();
+
+    const lastSnapshot = receivedSnapshots[receivedSnapshots.length - 1];
+    expect(lastSnapshot).toBeDefined();
+    expect(lastSnapshot.map((l) => l.info.id)).toContain(mockFavId);
+  });
+
+  it('writes playlist data and MyFavList index atomically in a single set call', async () => {
+    const manager = StorageManager.getInstance();
+    const localSetSpy = vi.spyOn(chrome.storage.local, 'set');
+    localSetSpy.mockClear();
+
+    const created = manager.addFavList('Atomic Test List');
+    expect(localSetSpy).toHaveBeenCalledTimes(1);
+
+    const firstArg = localSetSpy.mock.calls[0][0] as Record<string, any>;
+    expect(firstArg[created.info.id]).toBeDefined();
+    expect(firstArg.MyFavList).toContain(created.info.id);
+
+    localSetSpy.mockRestore();
+  });
 });
+
+
+

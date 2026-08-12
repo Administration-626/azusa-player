@@ -65,10 +65,26 @@ async function fetchVideoSongs(bvid: string): Promise<any[]> {
   return toSongs(json?.data, bvid);
 }
 
-async function fetchSongsByBvids(bvids: string[]): Promise<any[]> {
+async function fetchSongsByBvids(bvids: string[], chunkSize = 5): Promise<any[]> {
   const uniqueBvids = Array.from(new Set(bvids.filter(Boolean)));
-  const songGroups = await Promise.all(uniqueBvids.map((bvid) => fetchVideoSongs(bvid)));
-  return songGroups.flat();
+  const results: any[][] = [];
+
+  for (let i = 0; i < uniqueBvids.length; i += chunkSize) {
+    const chunk = uniqueBvids.slice(i, i + chunkSize);
+    const chunkResults = await Promise.all(
+      chunk.map(async (bvid) => {
+        try {
+          return await fetchVideoSongs(bvid);
+        } catch (error) {
+          console.warn(`[azusa-player] failed to fetch video songs for ${bvid}`, error);
+          return [];
+        }
+      }),
+    );
+    results.push(...chunkResults);
+  }
+
+  return results.flat();
 }
 
 export async function fetchSongsBySource(source: PageSource): Promise<any[]> {

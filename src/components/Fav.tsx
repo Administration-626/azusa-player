@@ -191,24 +191,15 @@ export const Fav = memo(function ({
   const resolvedHighlightSongId = String(highlightSongId || '');
   const resolvedCurrentSongId = String(currentAudioId || '');
 
-  const selectedSongs = useMemo(
-    () => (FavList.songList || []).filter((s) => selectedSongIds.includes(s.id)),
-    [selectedSongIds, FavList.songList],
-  );
+  const selectedSongs = useMemo(() => {
+    if (!selectedSongIds.length || !FavList.songList?.length) return [];
+    const set = new Set(selectedSongIds);
+    return FavList.songList.filter((s) => set.has(s.id));
+  }, [selectedSongIds, FavList.songList]);
 
   useEffect(() => {
     if (!resolvedHighlightSongId) return;
     const highlightedRow = rowRefs.current[resolvedHighlightSongId];
-    console.info('[azusa-player][locate]', 'applyHighlight', {
-      highlightSongId: resolvedHighlightSongId,
-      currentSongId: resolvedCurrentSongId,
-      highlightNonce,
-      theme: typeof document !== 'undefined' ? document.body?.dataset?.theme || 'light' : 'light',
-      page,
-      rowsPerPage,
-      visibleSongIds: visibleRows.map((song) => String(song.id)),
-      rowFound: !!highlightedRow,
-    });
     if (!highlightedRow || typeof highlightedRow.scrollIntoView !== 'function') return;
     highlightedRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [resolvedHighlightSongId, resolvedCurrentSongId, highlightNonce, page, rowsPerPage, visibleRows]);
@@ -219,9 +210,11 @@ export const Fav = memo(function ({
 
   const togglePageSelect = () => {
     const pageIds = visibleRows.map((s) => s.id);
-    const allSelected = pageIds.every((id) => selectedSongIds.includes(id));
+    const selectedSet = new Set(selectedSongIds);
+    const allSelected = pageIds.every((id) => selectedSet.has(id));
     if (allSelected) {
-      setSelectedSongIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+      const pageIdSet = new Set(pageIds);
+      setSelectedSongIds((prev) => prev.filter((id) => !pageIdSet.has(id)));
       return;
     }
     setSelectedSongIds((prev) => [...new Set([...prev, ...pageIds])]);

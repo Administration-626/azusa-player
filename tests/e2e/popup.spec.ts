@@ -87,7 +87,7 @@ test.describe('popup e2e', () => {
     await expect(page.getByRole('heading', { name: 'Azusa Test Playlist' })).toBeVisible();
   });
 
-  test('searches by BVID and can save the result as a playlist', async ({ page }) => {
+  test('searches by BVID and can save the result as a playlist and persists across reload', async ({ page }) => {
     await search(page, BVID_SEARCH);
 
     await expect(page.getByRole('heading', { name: new RegExp(BVID_SEARCH) })).toBeVisible();
@@ -98,6 +98,13 @@ test.describe('popup e2e', () => {
     await dialog.locator('#fav-name').fill('Playwright Saved Playlist');
     await dialog.getByRole('button').last().click();
 
+    await page.getByRole('button', { name: /Playwright Saved Playlist/ }).click();
+    await expect(page.getByRole('heading', { name: 'Playwright Saved Playlist' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Search Match Song' })).toBeVisible();
+
+    // 核心新增断言：刷新页面后，歌单必须依然完好显示在我的歌单列表中
+    await page.reload();
+    await expect(page.getByRole('button', { name: /Playwright Saved Playlist/ })).toBeVisible();
     await page.getByRole('button', { name: /Playwright Saved Playlist/ }).click();
     await expect(page.getByRole('heading', { name: 'Playwright Saved Playlist' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Search Match Song' })).toBeVisible();
