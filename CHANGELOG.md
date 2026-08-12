@@ -1,4 +1,18 @@
-﻿# Changelog
+# Changelog
+
+## 2.1.0 (2026-08-12)
+
+### Features & Performance
+- **Bilibili API Batching & Fault Tolerance**: Refactor multi-video imports into batched chunks (`chunkSize = 5`) with single-item error isolation (`try/catch`), preventing rate-limit bans (HTTP 412/429) and ensuring all healthy items import successfully.
+- **UI Animation Upgrade**: Replace harsh horizontal fly-in animation with smooth vertical slide-up fade-in (`cubic-bezier(0.16, 1, 0.3, 1)`), aligning with modern audio player design language.
+- **Set Data Structure Optimization**: Lower selected song lookup complexity from $O(N \cdot M)$ to $O(N)$ using `Set` lookups in `Fav.tsx`.
+
+### Stability & Fixes
+- **Storage Atomicity & Lifecycle Fix**: Fix race conditions in `StorageManager` by atomically setting playlist objects and index keys in a single `chrome.storage.local.set` call, avoiding missing playlists upon browser reload.
+- **PlayUrl Serialization Guard**: Ensure non-serializable closure functions (`musicSrc`) are filtered before persisting to `chrome.storage`.
+- **Debounced Menu Rendering**: Add `300ms` debounce to ServiceWorker context menu updates to prevent CPU thrashing during bulk operations.
+- **Chrome Extension Warning Cleanup**: Disable `build.modulePreload` in `vite.config.ts` to eliminate `cross-world extension resource mismatch` console warnings.
+- **Global Error Handlers**: Add silent global error handlers in Popup and Service Worker to prevent uncaught error leakage to Chrome Extension Error Collector.
 
 ## 2026-03-21
 
