@@ -95,7 +95,6 @@ describe('FavList delete last playlist guard', () => {
     const deleteIcons = document.querySelectorAll('[data-testid="DeleteOutlineOutlinedIcon"]');
     expect(deleteIcons).toHaveLength(1);
     await user.click(deleteIcons[0] as Element);
-    await user.click(screen.getByRole('button', { name: '确认删除歌单吗？' }));
 
     await waitFor(() => {
       expect(screen.getByText('至少保留一个歌单，不能删除最后一个歌单。')).toBeInTheDocument();

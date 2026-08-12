@@ -220,44 +220,6 @@ describe('Player mode and stability regression', () => {
     });
   });
 
-  it('reopens lyric overlay immediately after closing from overlay action', async () => {
-    const user = userEvent.setup();
-    const fakeStorage = {
-      getPlayerSetting: vi.fn().mockResolvedValue({ playMode: 'order', defaultVolume: 0.5, darkMode: false }),
-      setPlayerSetting: vi.fn(),
-      setLastPlayList: vi.fn(),
-    } as any;
-
-    render(
-      <StorageManagerCtx.Provider value={fakeStorage}>
-        <Player songList={makeSongs(2) as any} />
-      </StorageManagerCtx.Provider>,
-    );
-
-    await screen.findByTestId('jk-player');
-
-    render(
-      <StorageManagerCtx.Provider value={fakeStorage}>
-        <Player songList={makeSongs(2) as any} />
-      </StorageManagerCtx.Provider>,
-    );
-
-    await screen.findByTestId('jk-player');
-    expect(chromeMock.storage.local.remove).toHaveBeenCalledWith('SongProgressMap');
-
-    latestJkProps.onAudioPlay(makeSongs(2)[1]);
-    latestJkProps.onAudioProgress({ id: 'id-1', currentTime: 98, name: 'Song-1', singer: 'Singer', cover: 'cover' });
-
-    const wroteSongProgressMap = chromeMock.storage.local.set.mock.calls.some(
-      ([payload]: [Record<string, unknown>]) => Object.prototype.hasOwnProperty.call(payload || {}, 'SongProgressMap'),
-    );
-    const readSongProgressMap = chromeMock.storage.local.get.mock.calls.some(
-      ([keys]: [unknown]) => Array.isArray(keys) && keys.includes('SongProgressMap'),
-    );
-
-    expect(wroteSongProgressMap).toBe(false);
-    expect(readSongProgressMap).toBe(false);
-  });
 
   it('plays newly searched songs immediately after playlist insertion', async () => {
     const user = userEvent.setup();

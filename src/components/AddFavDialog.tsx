@@ -151,7 +151,7 @@ export const HelpDialog = function ({ onClose, openState }: HelpDialogProps) {
           2. <strong>右键链接添加</strong>：在网页上对着某个视频链接或封面右键，同样可以通过菜单快捷添加。
         </DialogContentText>
         <DialogContentText sx={{ mt: 1 }}>
-          3. <strong>直接粘贴链接</strong>：你也可以直接复制网页链接或 BVID (如 <code>BV1wr4y1v7TA</code>)，粘贴到上方的搜索栏中回车。
+          3. <strong>直接粘贴链接</strong>：你也可以直接复制网页链接（如 <code>https://space.bilibili.com/...</code>）或 BVID (如 <code>BV1wr4y1v7TA</code>)，粘贴到上方的搜索栏中回车。
         </DialogContentText>
         <DialogContentText sx={{ mt: 2, p: 1, borderRadius: 1, bgcolor: 'rgba(171, 95, 255, 0.08)', fontSize: '0.85em' }}>
           <strong>💡 播放提示</strong>：部分高质量视频因 B 站分配了 P2P 节点 (MCDN)，在代理或特定网络下可能返回 404 导致无法播放。插件已内置自动搜索备份 CDN 的功能，如遇卡顿或报错，请尝试重新切歌或刷新插件。

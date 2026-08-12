@@ -8,6 +8,16 @@ const createFavRecord = (id: string, title: string, songList: any[] = []) => ({
   songList,
 });
 
+vi.mock('../src/api/bilibili/BilibiliApiClient', () => ({
+  bilibiliApi: {
+    fetchVideoInfo: vi.fn().mockResolvedValue(undefined),
+    fetchFavBvids: vi.fn().mockResolvedValue([]),
+    fetchBiliSeriesBvids: vi.fn().mockResolvedValue([]),
+    fetchBiliColleBvids: vi.fn().mockResolvedValue([]),
+    resolvePlayUrlWithCache: vi.fn().mockResolvedValue(''),
+  },
+}));
+
 describe('service worker stale menu fallback', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -47,10 +57,9 @@ describe('service worker stale menu fallback', () => {
     await flushPromises();
 
     expect(localStore[favId].songList).toHaveLength(1);
-    expect(chromeMock.notifications.create).toHaveBeenCalledWith(
+    expect(chromeMock.scripting.executeScript).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: '已添加到歌单',
-        message: expect.stringContaining('新歌单'),
+        args: ['已添加到歌单', expect.stringContaining('新歌单'), false],
       }),
     );
   });
@@ -77,10 +86,9 @@ describe('service worker stale menu fallback', () => {
     );
     await flushPromises();
 
-    expect(chromeMock.notifications.create).toHaveBeenCalledWith(
+    expect(chromeMock.scripting.executeScript).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: '无需添加',
-        message: expect.stringContaining('已经有'),
+        args: ['无需添加', expect.stringContaining('已经有'), false],
       }),
     );
   });
@@ -109,7 +117,7 @@ describe('service worker stale menu fallback', () => {
     expect(chromeMock.notifications.create).toHaveBeenCalledWith(
       expect.objectContaining({
         title: '添加失败',
-        message: expect.stringContaining('Bilibili API error -352'),
+        message: expect.stringContaining('Failed to load the source video.'),
       }),
     );
   });

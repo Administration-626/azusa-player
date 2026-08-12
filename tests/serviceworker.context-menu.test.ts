@@ -64,7 +64,11 @@ describe('service worker context menus', () => {
       }),
       expect.any(Function),
     );
-    expect(chromeMock.notifications.create).toHaveBeenCalled();
+    expect(chromeMock.scripting.executeScript).toHaveBeenCalledWith(
+      expect.objectContaining({
+        args: ['已添加到歌单', expect.any(String), false],
+      }),
+    );
   });
 
   it('parses supported page and link menu targets before adding them to playlists', async () => {
