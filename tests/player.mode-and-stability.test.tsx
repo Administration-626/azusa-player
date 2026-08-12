@@ -235,10 +235,6 @@ describe('Player mode and stability regression', () => {
     );
 
     await screen.findByTestId('jk-player');
-      getPlayerSetting: vi.fn().mockResolvedValue({ playMode: 'order', defaultVolume: 0.5, darkMode: false }),
-      setPlayerSetting: vi.fn(),
-      setLastPlayList: vi.fn(),
-    } as any;
 
     render(
       <StorageManagerCtx.Provider value={fakeStorage}>

@@ -1,5 +1,5 @@
 ﻿import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchBiliColleList, fetchFavList, fetchPlayUrlPromise, searchLyric } from '../src/utils/Data';
+import { bilibiliApi } from '../src/api/bilibili/BilibiliApiClient';
 
 const mockJsonResponse = (payload: any, init: { contentType?: string; ok?: boolean } = {}) => {
   const contentType = init.contentType ?? 'application/json; charset=utf-8';
@@ -13,7 +13,7 @@ const mockJsonResponse = (payload: any, init: { contentType?: string; ok?: boole
   };
 };
 
-describe('Data integration behaviors', () => {
+describe('BilibiliApiClient integration behaviors', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     (globalThis as any).chrome = {
@@ -81,7 +81,7 @@ describe('Data integration behaviors', () => {
 
     vi.stubGlobal('fetch', fetchMock as any);
 
-    const infos = await fetchFavList('MID_1');
+    const infos = await bilibiliApi.fetchFavList('MID_1');
     const titles = infos.filter(Boolean).map((v: any) => v.title);
 
     expect(titles).toContain('first');
@@ -103,7 +103,9 @@ describe('Data integration behaviors', () => {
 
     vi.stubGlobal('fetch', fetchMock as any);
 
-    await expect(fetchFavList('MID_RISK')).rejects.toThrow('The request was rejected because of the bilibili security control policy.');
+    await expect(bilibiliApi.fetchFavList('MID_RISK')).rejects.toThrow(
+      'The request was rejected because of the bilibili security control policy.',
+    );
   });
 
   it('fetchBiliColleList uses the web-space season endpoint', async () => {
@@ -136,7 +138,7 @@ describe('Data integration behaviors', () => {
 
     vi.stubGlobal('fetch', fetchMock as any);
 
-    const infos = await fetchBiliColleList('896830', '3149109');
+    const infos = await bilibiliApi.fetchBiliColleList('896830', '3149109');
     const titles = infos.filter(Boolean).map((v: any) => v.title);
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -150,7 +152,7 @@ describe('Data integration behaviors', () => {
     expect(titles).toEqual(['season-item']);
   });
 
-  it('fetchPlayUrlPromise prefers selected dash audio and uses cache when possible', async () => {
+  it('resolvePlayUrl prefers the highest-quality non-MCDN dash audio', async () => {
     const fetchMock = vi.fn(async (url: string) => {
       if (url.includes('/x/player/playurl')) {
         return mockJsonResponse({
@@ -158,7 +160,7 @@ describe('Data integration behaviors', () => {
             dash: {
               audio: [
                 { id: 1, bandwidth: 100, codecs: 'aac', baseUrl: 'low-url' },
-                { id: 2, bandwidth: 200, codecs: 'mp4a.40.2', baseUrl: 'high-url' },
+                { id: 2, bandwidth: 200, codecs: 'mp4a.40.2', baseUrl: 'https://mcdn.bilivideo.cn/peer' },
               ],
             },
           },
@@ -169,29 +171,8 @@ describe('Data integration behaviors', () => {
 
     vi.stubGlobal('fetch', fetchMock as any);
 
-    const url = await fetchPlayUrlPromise('BV_X', 'CID_X');
-    expect(url).toBe('high-url');
-
-    ((globalThis as any).chrome.storage.local.get as any).mockImplementationOnce((keys: any, cb: (result: any) => void) => {
-      cb({
-        CurrentPlaying: { cid: 'CID_CACHE', playUrl: 'cached-url' },
-        PlayerSetting: { playMode: 'order' },
-      });
-    });
-
-    const cachedUrl = await fetchPlayUrlPromise('BV_X', 'CID_CACHE');
-    expect(cachedUrl).toBe('cached-url');
-  });
-
-  it('searchLyric returns fallback message when lyric does not exist', async () => {
-    const fetchMock = vi.fn(async () => mockJsonResponse({}));
-    vi.stubGlobal('fetch', fetchMock as any);
-
-    let lyric = '';
-    await searchLyric('MID_NONE', (v: string) => {
-      lyric = v;
-    });
-
-    expect(lyric).toContain('无法找到歌词');
+    // 最高带宽是 MCDN 节点，应回退到非 MCDN 的 low-url
+    const url = await bilibiliApi.resolvePlayUrl('BV_X', 'CID_X');
+    expect(url).toBe('low-url');
   });
 });

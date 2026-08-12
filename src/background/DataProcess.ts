@@ -1,13 +1,4 @@
-﻿import {
-  fetchVideoInfo,
-  fetchPlayUrlPromise,
-  fetchFavList,
-  fetchBiliSeriesInfo,
-  fetchBiliColleList,
-  fetchFavBvids,
-  fetchBiliSeriesBvids,
-  fetchBiliColleBvids,
-} from '../utils/Data';
+﻿import { bilibiliApi } from '../api/bilibili/BilibiliApiClient';
 import Song from '../objects/Song';
 import { browserApi } from '../platform/browserApi';
 
@@ -45,10 +36,7 @@ export const initSongList = async (setCurrentSongList: (songs: Song[]) => void) 
   browserApi.storage.local.get([LAST_PLAY_LIST], async function (result) {
     const lastPlayList = result[LAST_PLAY_LIST] as Song[] | undefined;
     if (lastPlayList && lastPlayList.length !== 0) {
-      lastPlayList.forEach((v: any) => {
-        v.musicSrc = () => fetchPlayUrlPromise(v.bvid, v.id);
-      });
-      setCurrentSongList(lastPlayList);
+      setCurrentSongList(lastPlayList.map((v: any) => Song.hydrate(v)));
       return;
     }
 
@@ -57,43 +45,38 @@ export const initSongList = async (setCurrentSongList: (songs: Song[]) => void) 
   });
 };
 
-export const getSongList = async (bvid: string): Promise<Song[]> => {
-  const info = (await fetchVideoInfo(bvid)) as VideoInfoLike | undefined;
-  if (!info) return [];
-
-  const lrc = '';
+/** 从 VideoInfo 构建 Song 列表（单视频或多 P 视频） */
+const videoInfoToSongs = (info: VideoInfoLike, bvid: string): Song[] => {
   if (info.pages.length === 1) {
     return [
-      new Song({
+      Song.withLazySrc({
         cid: String(info.pages[0].cid),
         bvid,
         name: info.title,
         singer: info.uploader.name,
         singerId: info.uploader.mid,
         cover: '',
-        musicSrc: () => fetchPlayUrlPromise(bvid, info.pages[0].cid),
-        lyric: lrc,
       }),
     ];
   }
 
-  const songs: Song[] = [];
-  for (const page of info.pages) {
-    songs.push(
-      new Song({
+  return info.pages.map(
+    (page) =>
+      Song.withLazySrc({
         cid: String(page.cid),
         bvid,
         name: page.part,
         singer: info.uploader.name,
         singerId: info.uploader.mid,
         cover: '',
-        musicSrc: () => fetchPlayUrlPromise(bvid, page.cid),
-        lyric: lrc,
       }),
-    );
-  }
+  );
+};
 
-  return songs;
+export const getSongList = async (bvid: string): Promise<Song[]> => {
+  const info = (await bilibiliApi.fetchVideoInfo(bvid)) as VideoInfoLike | undefined;
+  if (!info) return [];
+  return videoInfoToSongs(info, bvid);
 };
 
 const getSongsFromBVids = async (infos: (VideoInfoLike | undefined)[], strict = false): Promise<Song[]> => {
@@ -101,42 +84,10 @@ const getSongsFromBVids = async (infos: (VideoInfoLike | undefined)[], strict = 
     throw new Error('Failed to load the complete source playlist.');
   }
 
-  const songs: Song[] = [];
-
-  infos.forEach((info) => {
-    if (!info) return;
-
-    if (info.pages.length === 1) {
-      songs.push(
-        new Song({
-          cid: String(info.pages[0].cid),
-          bvid: info.pages[0].bvid,
-          name: info.title,
-          singer: info.uploader.name,
-          singerId: info.uploader.mid,
-          cover: '',
-          musicSrc: () => fetchPlayUrlPromise(info.pages[0].bvid, info.pages[0].cid),
-        }),
-      );
-      return;
-    }
-
-    for (const page of info.pages) {
-      songs.push(
-        new Song({
-          cid: String(page.cid),
-          bvid: page.bvid,
-          name: page.part,
-          singer: info.uploader.name,
-          singerId: info.uploader.mid,
-          cover: '',
-          musicSrc: () => fetchPlayUrlPromise(page.bvid, page.cid),
-        }),
-      );
-    }
-  });
-
-  return songs;
+  return infos.reduce<Song[]>((songs, info) => {
+    if (!info) return songs;
+    return songs.concat(videoInfoToSongs(info, info.pages[0]?.bvid || ''));
+  }, []);
 };
 
 const groupSongsByBvid = (songs: SongLike[] = []): Map<string, Song[]> => {
@@ -172,6 +123,18 @@ const fetchSongsByBvidMap = async (bvids: string[]): Promise<Map<string, Song[]>
   return new Map(entries.filter(([, songs]) => songs.length > 0));
 };
 
+/** 按 BVID 顺序展平歌曲（跳过缺失项） */
+const flattenByOrder = (orderedBvids: string[], byBvid: Map<string, Song[]>): Song[] => {
+  const songs: Song[] = [];
+  for (const bvid of orderedBvids) {
+    const matchedSongs = byBvid.get(bvid);
+    if (matchedSongs?.length) {
+      songs.push(...matchedSongs);
+    }
+  }
+  return songs;
+};
+
 /**
  * 根据来源 BVID 列表重新构建歌单。
  * 具备容错性：跳过无法从本地或远程获取的失效视频。
@@ -182,16 +145,8 @@ const rebuildSongsFromSourceBvids = async (sourceBvids: string[], existingSongs:
   const missingBvids = Array.from(new Set(orderedBvids.filter((bvid) => !(existingByBvid.get(bvid)?.length))));
   const fetchedByBvid = missingBvids.length ? await fetchSongsByBvidMap(missingBvids) : new Map<string, Song[]>();
 
-  const songs: Song[] = [];
-  for (const bvid of orderedBvids) {
-    const matchedSongs = existingByBvid.get(bvid) || fetchedByBvid.get(bvid);
-    // 只将有效（已成功获取）的歌曲加入最终列表
-    if (matchedSongs?.length) {
-      songs.push(...matchedSongs);
-    }
-  }
-
-  return songs;
+  const resolvedByBvid = new Map<string, Song[]>([...existingByBvid, ...fetchedByBvid]);
+  return flattenByOrder(orderedBvids, resolvedByBvid);
 };
 
 const getSourceOrderedBvids = async (source: SearchSource): Promise<string[]> => {
@@ -199,11 +154,11 @@ const getSourceOrderedBvids = async (source: SearchSource): Promise<string[]> =>
     case 'bvid':
       return [source.bvid];
     case 'fav':
-      return fetchFavBvids(source.mid);
+      return bilibiliApi.fetchFavBvids(source.mid);
     case 'series':
-      return fetchBiliSeriesBvids(source.mid, source.sid);
+      return bilibiliApi.fetchBiliSeriesBvids(source.mid, source.sid);
     case 'collection':
-      return fetchBiliColleBvids(source.mid, source.sid);
+      return bilibiliApi.fetchBiliColleBvids(source.mid, source.sid);
     default:
       return [];
   }
@@ -228,31 +183,20 @@ export const refreshSongsFromSource = async (
     const existingGroup = existingByBvid.get(bvid);
     if (existingGroup?.length) {
       resolvedByBvid.set(bvid, existingGroup);
-      processed += 1;
-      onProgress?.({ processed, total, failedCount: failedBvids.length });
-      continue;
-    }
-
-    const fetchedSongs = await getSongList(bvid).catch(() => []);
-    if (fetchedSongs.length) {
-      resolvedByBvid.set(bvid, fetchedSongs);
     } else {
-      failedBvids.push(bvid);
+      const fetchedSongs = await getSongList(bvid).catch(() => []);
+      if (fetchedSongs.length) {
+        resolvedByBvid.set(bvid, fetchedSongs);
+      } else {
+        failedBvids.push(bvid);
+      }
     }
     processed += 1;
     onProgress?.({ processed, total, failedCount: failedBvids.length });
   }
 
-  const songs: Song[] = [];
-  for (const bvid of orderedUniqueBvids) {
-    const matchedSongs = resolvedByBvid.get(bvid);
-    if (matchedSongs?.length) {
-      songs.push(...matchedSongs);
-    }
-  }
-
   return {
-    songs,
+    songs: flattenByOrder(orderedUniqueBvids, resolvedByBvid),
     processed,
     total,
     failedCount: failedBvids.length,
@@ -261,15 +205,15 @@ export const refreshSongsFromSource = async (
 };
 
 export const getBiliSeriesList = async (mid: string, sid: string): Promise<Song[]> => {
-  return getSongsFromBVids(await fetchBiliSeriesInfo(mid, sid));
+  return getSongsFromBVids(await bilibiliApi.fetchBiliSeriesInfo(mid, sid));
 };
 
 export const getFavList = async (mid: string): Promise<Song[]> => {
-  return getSongsFromBVids(await fetchFavList(mid));
+  return getSongsFromBVids(await bilibiliApi.fetchFavList(mid));
 };
 
 export const getBiliColleList = async (mid: string, sid: string, favList: string[] = []): Promise<Song[]> => {
-  return getSongsFromBVids(await fetchBiliColleList(mid, sid, favList));
+  return getSongsFromBVids(await bilibiliApi.fetchBiliColleList(mid, sid, favList));
 };
 
 export const getSongsFromSource = async (source: SearchSource, existingSongs: SongLike[] = []): Promise<Song[]> => {
@@ -283,11 +227,11 @@ export const getSongsFromSource = async (source: SearchSource, existingSongs: So
         return songs;
       }
     case 'fav':
-      return rebuildSongsFromSourceBvids(await fetchFavBvids(source.mid), existingSongs);
+      return rebuildSongsFromSourceBvids(await bilibiliApi.fetchFavBvids(source.mid), existingSongs);
     case 'series':
-      return rebuildSongsFromSourceBvids(await fetchBiliSeriesBvids(source.mid, source.sid), existingSongs);
+      return rebuildSongsFromSourceBvids(await bilibiliApi.fetchBiliSeriesBvids(source.mid, source.sid), existingSongs);
     case 'collection':
-      return rebuildSongsFromSourceBvids(await fetchBiliColleBvids(source.mid, source.sid), existingSongs);
+      return rebuildSongsFromSourceBvids(await bilibiliApi.fetchBiliColleBvids(source.mid, source.sid), existingSongs);
     default:
       return [];
   }

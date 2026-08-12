@@ -1,4 +1,4 @@
-﻿import { extractSongName } from './Data';
+﻿import { extractSongName } from './string';
 
 const cleanup = (name: string) => {
   let value = String(name || '').trim();

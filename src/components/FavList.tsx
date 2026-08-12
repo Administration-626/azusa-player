@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, memo, useContext } from 'react';
+import React, { useEffect, useState, useCallback, useRef, memo, useContext } from 'react';
 import { Search } from './Search';
 import { Fav } from './Fav';
 import { ScrollBar } from '../styles/styles';
@@ -31,7 +31,7 @@ import Badge from '@mui/material/Badge';
 import SyncIcon from '@mui/icons-material/Sync';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
-import { fetchPlayUrlPromise } from '../utils/Data';
+import { bilibiliApi } from '../api/bilibili/BilibiliApiClient';
 import Alert from '@mui/material/Alert';
 import LinearProgress from '@mui/material/LinearProgress';
 import Snackbar from '@mui/material/Snackbar';
@@ -122,6 +122,57 @@ const cloneWithTableInfo = (list: FavLike, currentTableInfo: Record<string, unkn
   },
 });
 
+interface PlaylistListItemProps {
+  list: FavLike;
+  icon: React.ReactNode;
+  selected: boolean;
+  onSelect: () => void;
+  onPlayAll: (songs: SongLike[]) => void;
+  onAddFavToList: (songs: SongLike[]) => void;
+  onAddToFavClick: (id: string, songs: SongLike[]) => void;
+  refreshButton?: React.ReactElement;
+  extraActions?: React.ReactNode;
+}
+
+/** 侧边栏歌单项（搜索列表与收藏列表共用） */
+const PlaylistListItem = memo(function ({
+  list,
+  icon,
+  selected,
+  onSelect,
+  onPlayAll,
+  onAddFavToList,
+  onAddToFavClick,
+  refreshButton,
+  extraActions,
+}: PlaylistListItemProps) {
+  return (
+    <ListItemButton disableRipple sx={outerLayerBtn} selected={selected} onClick={onSelect} id={list.info.id}>
+      <ListItemIcon sx={DiskIcon}>{icon}</ListItemIcon>
+      <ListItemText
+        sx={{ color: 'var(--azusa-fg)', minWidth: 0, overflow: 'hidden' }}
+        primaryTypographyProps={{ fontSize: '1.02rem', noWrap: true }}
+        primary={list.info.title}
+      />
+      <Box component='div' sx={CRUDBtn} onClick={(e) => e.stopPropagation()}>
+        <Tooltip title='播放歌单'>
+          <PlaylistPlayIcon sx={CRUDIcon} onClick={() => onPlayAll(list.songList)} />
+        </Tooltip>
+        <Tooltip title='加入播放列表'>
+          <PlaylistAddIcon sx={CRUDIcon} onClick={() => onAddFavToList(list.songList)} />
+        </Tooltip>
+        <Tooltip title='添加到歌单'>
+          <AddBoxOutlinedIcon sx={CRUDIcon} onClick={() => onAddToFavClick(list.info.id, list.songList)} />
+        </Tooltip>
+        {list.info.source && refreshButton ? (
+          <Tooltip title='按原始来源刷新'>{refreshButton}</Tooltip>
+        ) : null}
+        {extraActions}
+      </Box>
+    </ListItemButton>
+  );
+});
+
 export const FavList = memo(function ({
   currentAudioId,
   darkMode = false,
@@ -145,11 +196,15 @@ export const FavList = memo(function ({
   const [pendingNewFavPayload, setPendingNewFavPayload] = useState<{ songs: SongLike[]; source?: SearchSource } | null>(null);
   const [refreshState, setRefreshState] = useState<RefreshState | null>(null);
   const [refreshNotice, setRefreshNotice] = useState<RefreshNotice | null>(null);
+  const rafIdRef = useRef<number>(0);
 
   const StorageManager = useContext(StorageManagerCtx) as any;
-  const titleColor = 'var(--azusa-fg)';
-  const itemTextColor = 'var(--azusa-fg)';
-  const searchTextColor = 'var(--azusa-fg)';
+
+  /** 按 id 查找来源歌单（搜索列表或已收藏列表） */
+  const getSourceList = useCallback(
+    (id: string) => (id === 'FavList-Search' ? searchList : favLists?.find((f) => f.info.id === id)),
+    [searchList, favLists],
+  );
 
   const persistSelectedFavId = useCallback(
     async (favId?: string | null) => {
@@ -177,27 +232,21 @@ export const FavList = memo(function ({
         const count = Number(message.data?.count ?? message.data?.n ?? message.data?.num ?? 0);
         if (!favId) return;
 
-        StorageManager.readLocalStorage(favId).then((fav: any) => {
-          const idx = StorageManager.latestFavLists.findIndex((f: FavLike) => f.info.id == favId);
-          if (idx === -1) return;
-
-          const updatedFav = (StorageManager.latestFavLists[idx] = fav);
-          updatedFav.songList.slice(0, count).forEach((song: SongLike) => {
-            (song as any).musicSrc = () => fetchPlayUrlPromise(song.bvid, song.id);
-          });
-          setFavLists([...StorageManager.latestFavLists]);
+        StorageManager.syncFavFromStorage(favId, count).then((updatedFav: FavLike | undefined) => {
+          if (!updatedFav) return;
           updatedFav.info.currentTableInfo = {};
           selectFavList(updatedFav);
         });
       }
     };
 
-    StorageManager.setFavLists = setFavLists;
+    const unsubscribe = StorageManager.subscribe(setFavLists);
     StorageManager.initFavLists().then(() => {
       browserApi.runtime.onMessage.addListener(onRuntimeMessage);
     });
 
     return () => {
+      unsubscribe();
       browserApi.runtime.onMessage.removeListener(onRuntimeMessage);
     };
   }, [StorageManager, selectFavList]);
@@ -238,7 +287,7 @@ export const FavList = memo(function ({
     };
   }, [favLists, selectedList, StorageManager, selectFavList]);
 
-  const updateListState = (updatedList: FavLike, currentTableInfo: Record<string, unknown> = {}) => {
+  const updateListState = useCallback((updatedList: FavLike, currentTableInfo: Record<string, unknown> = {}) => {
     const normalized = cloneWithTableInfo(updatedList, currentTableInfo);
     if (normalized.info.id === 'FavList-Search') {
       setSearchList(normalized);
@@ -247,84 +296,74 @@ export const FavList = memo(function ({
     }
     StorageManager.updateFavList(normalized);
     selectFavList(normalized);
-  };
+  }, [StorageManager, selectFavList]);
 
-  const refreshFromSource = async (list: FavLike) => {
+  const refreshFromSource = useCallback(async (list: FavLike) => {
     if (!list.info.source || refreshState?.running) return;
-    setRefreshState({ listId: list.info.id, processed: 0, total: 0, failedCount: 0, running: true });
+    const progressRef = { current: { listId: list.info.id, processed: 0, total: 0, failedCount: 0, running: true } };
+    setRefreshState({ ...progressRef.current });
+
     try {
       const result = await refreshSongsFromSource(list.info.source, list.songList, (progress) => {
-        setRefreshState({
-          listId: list.info.id,
-          processed: progress.processed,
-          total: progress.total,
-          failedCount: progress.failedCount,
-          running: true,
-        });
+        progressRef.current = { listId: list.info.id, ...progress, running: true };
+        // 节流：每 16ms（≈60fps）最多更新一次 UI
+        if (!rafIdRef.current) {
+          rafIdRef.current = requestAnimationFrame(() => {
+            rafIdRef.current = 0;
+            setRefreshState({ ...progressRef.current });
+          });
+        }
       });
 
-      const refreshed = {
-        ...list,
-        songList: result.songs,
-      };
-
+      const refreshed = { ...list, songList: result.songs };
       updateListState(refreshed, list.info.currentTableInfo || {});
-      setRefreshState({
-        listId: list.info.id,
-        processed: result.processed,
-        total: result.total,
-        failedCount: result.failedCount,
-        running: false,
+      cancelAnimationFrame(rafIdRef.current!);
+      rafIdRef.current = 0;
+      setRefreshState({ listId: list.info.id, processed: result.processed, total: result.total, failedCount: result.failedCount, running: false });
+      setRefreshNotice({
+        severity: result.failedCount > 0 ? 'warning' : 'success',
+        message: result.failedCount > 0
+          ? `刷新完成，但有 ${result.failedCount} 首获取失败，已跳过。请稍后再试。`
+          : `刷新完成，共同步 ${result.total} 首。`,
       });
-      if (result.failedCount > 0) {
-        setRefreshNotice({
-          severity: 'warning',
-          message: `刷新完成，但有 ${result.failedCount} 首获取失败，已跳过。请稍后再试。`,
-        });
-      } else {
-        setRefreshNotice({
-          severity: 'success',
-          message: `刷新完成，共同步 ${result.total} 首。`,
-        });
-      }
     } catch (error) {
       console.error('refreshFromSource failed', list.info.source, error);
-      setRefreshState((prev) =>
-        prev && prev.listId === list.info.id ? { ...prev, running: false } : prev,
-      );
+      cancelAnimationFrame(rafIdRef.current!);
+      rafIdRef.current = 0;
+      setRefreshState((prev) => (prev && prev.listId === list.info.id ? { ...prev, running: false } : prev));
       setRefreshNotice({
         severity: 'error',
         message: '按原始来源刷新失败，已保留当前歌单内容。请稍后重试，或先在 B 站页面完成验证后再刷新。',
       });
     }
-  };
+  }, [refreshState, StorageManager, updateListState]);
 
   const handleDelteFromSearchList = useCallback(
     (id: string, songId: string, currentTableInfo: Record<string, unknown>) => {
-      const source = id === 'FavList-Search' ? searchList : favLists?.find((f) => f.info.id === id);
+      const source = getSourceList(id);
       if (!source) return;
       const updated = { ...source, songList: source.songList.filter((s) => s.id !== songId) };
       updateListState(updated, currentTableInfo);
     },
-    [searchList, favLists],
+    [getSourceList, updateListState],
   );
 
   const handleDeleteSongs = useCallback(
     (id: string, songIds: string[], currentTableInfo: Record<string, unknown>) => {
       if (!songIds?.length) return;
-      const source = id === 'FavList-Search' ? searchList : favLists?.find((f) => f.info.id === id);
+      const source = getSourceList(id);
       if (!source) return;
       const idSet = new Set(songIds);
       const updated = { ...source, songList: source.songList.filter((s) => !idSet.has(s.id)) };
       updateListState(updated, currentTableInfo);
     },
-    [searchList, favLists],
+    [getSourceList, updateListState],
   );
 
   const handleRenameSong = useCallback(
     (id: string, songId: string, newName: string, currentTableInfo: Record<string, unknown>) => {
       if (!newName) return;
-      const source = id === 'FavList-Search' ? searchList : favLists?.find((f) => f.info.id === id);
+      const source = getSourceList(id);
       if (!source) return;
       const updated = {
         ...source,
@@ -332,7 +371,7 @@ export const FavList = memo(function ({
       };
       updateListState(updated, currentTableInfo);
     },
-    [searchList, favLists],
+    [getSourceList, updateListState],
   );
 
   const onNewFav = (val?: string) => {
@@ -521,7 +560,7 @@ export const FavList = memo(function ({
       >
         <Grid container alignItems='center' sx={{ px: 0.5, pb: 0.5 }}>
           <Grid item xs={6}>
-            <Typography variant='subtitle1' sx={{ color: titleColor }}>
+            <Typography variant='subtitle1' sx={{ color: 'var(--azusa-fg)' }}>
               我的歌单
             </Typography>
           </Grid>
@@ -589,41 +628,23 @@ export const FavList = memo(function ({
         <Divider light />
         <List sx={{ width: '100%', py: 0.5 }} component='nav'>
           <React.Fragment key='search-list'>
-            <ListItemButton
-              disableRipple
-              sx={outerLayerBtn}
+            <PlaylistListItem
+              list={searchList}
+              icon={<ManageSearchIcon />}
               selected={selectedList?.info.id === searchList.info.id}
-              onClick={() => onNewSelectedList(searchList)}
-              id={searchList.info.id}
-            >
-              <ListItemIcon sx={DiskIcon}>
-                <ManageSearchIcon />
-              </ListItemIcon>
-              <ListItemText
-                sx={{ color: searchTextColor, minWidth: 0, overflow: 'hidden' }}
-                primaryTypographyProps={{ fontSize: '1.02rem', noWrap: true }}
-                primary={searchList.info.title}
-              />
-              <Box component='div' sx={CRUDBtn} onClick={(e) => e.stopPropagation()}>
-                <Tooltip title='播放歌单'>
-                  <PlaylistPlayIcon sx={CRUDIcon} onClick={() => onPlayAllFromFav(searchList.songList)} />
-                </Tooltip>
-                <Tooltip title='加入播放列表'>
-                  <PlaylistAddIcon sx={CRUDIcon} onClick={() => onAddFavToList(searchList.songList)} />
-                </Tooltip>
-                <Tooltip title='添加到歌单'>
-                  <AddBoxOutlinedIcon sx={CRUDIcon} onClick={() => handleAddToFavClick(searchList.info.id, searchList.songList)} />
-                </Tooltip>
-                {searchList.info.source ? (
-                  <Tooltip title='按原始来源刷新'>
-                    <SyncIcon
-                      data-testid='refresh-search-source'
-                      aria-label='refresh-search-source'
-                      sx={CRUDIcon}
-                      onClick={() => refreshFromSource(searchList)}
-                    />
-                  </Tooltip>
-                ) : null}
+              onSelect={() => onNewSelectedList(searchList)}
+              onPlayAll={onPlayAllFromFav}
+              onAddFavToList={onAddFavToList}
+              onAddToFavClick={handleAddToFavClick}
+              refreshButton={
+                <SyncIcon
+                  data-testid='refresh-search-source'
+                  aria-label='refresh-search-source'
+                  sx={CRUDIcon}
+                  onClick={() => refreshFromSource(searchList)}
+                />
+              }
+              extraActions={
                 <Tooltip title='保存为新歌单'>
                   <FiberNewIcon
                     data-testid='save-search-as-playlist'
@@ -636,57 +657,39 @@ export const FavList = memo(function ({
                     }}
                   />
                 </Tooltip>
-              </Box>
-            </ListItemButton>
+              }
+            />
           </React.Fragment>
 
           {favLists &&
             favLists.map((v, i) => (
               <React.Fragment key={i}>
-                <ListItemButton
-                  disableRipple
-                  sx={outerLayerBtn}
+                <PlaylistListItem
+                  list={v}
+                  icon={<AlbumOutlinedIcon />}
                   selected={selectedList?.info.id === v.info.id}
-                  onClick={() => onNewSelectedList(v)}
-                  id={v.info.id}
-                >
-                  <ListItemIcon sx={DiskIcon}>
-                    <AlbumOutlinedIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    sx={{ color: itemTextColor, minWidth: 0, overflow: 'hidden' }}
-                    primaryTypographyProps={{ fontSize: '1.02rem', noWrap: true }}
-                    primary={v.info.title}
-                  />
-                  <Box component='div' sx={CRUDBtn} onClick={(e) => e.stopPropagation()}>
-                    <Tooltip title='播放歌单'>
-                      <PlaylistPlayIcon sx={CRUDIcon} onClick={() => onPlayAllFromFav(v.songList)} />
-                    </Tooltip>
-                    <Tooltip title='加入播放列表'>
-                      <PlaylistAddIcon sx={CRUDIcon} onClick={() => onAddFavToList(v.songList)} />
-                    </Tooltip>
-                    <Tooltip title='添加到歌单'>
-                      <AddBoxOutlinedIcon sx={CRUDIcon} onClick={() => handleAddToFavClick(v.info.id, v.songList)} />
-                    </Tooltip>
-                    {v.info.source ? (
-                      <Tooltip title='按原始来源刷新'>
-                        <SyncIcon sx={CRUDIcon} onClick={() => refreshFromSource(v)} />
+                  onSelect={() => onNewSelectedList(v)}
+                  onPlayAll={onPlayAllFromFav}
+                  onAddFavToList={onAddFavToList}
+                  onAddToFavClick={handleAddToFavClick}
+                  refreshButton={<SyncIcon sx={CRUDIcon} onClick={() => refreshFromSource(v)} />}
+                  extraActions={
+                    <>
+                      <Tooltip title='重命名歌单'>
+                        <EditOutlinedIcon
+                          sx={CRUDIcon}
+                          onClick={() => {
+                            setRenameTarget(v);
+                            setOpenNewDialog(true);
+                          }}
+                        />
                       </Tooltip>
-                    ) : null}
-                    <Tooltip title='重命名歌单'>
-                      <EditOutlinedIcon
-                        sx={CRUDIcon}
-                        onClick={() => {
-                          setRenameTarget(v);
-                          setOpenNewDialog(true);
-                        }}
-                      />
-                    </Tooltip>
-                    <Tooltip title='删除歌单'>
-                      <DeleteOutlineOutlinedIcon sx={CRUDIcon} onClick={() => handleDeleteFavClick(v.info.id)} />
-                    </Tooltip>
-                  </Box>
-                </ListItemButton>
+                      <Tooltip title='删除歌单'>
+                        <DeleteOutlineOutlinedIcon sx={CRUDIcon} onClick={() => handleDeleteFavClick(v.info.id)} />
+                      </Tooltip>
+                    </>
+                  }
+                />
               </React.Fragment>
             ))}
         </List>

@@ -1,7 +1,7 @@
 import { getSongList } from '../background/DataProcess';
 import { v4 as uuidv4 } from 'uuid';
 import type { SearchSource } from '../background/DataProcess';
-import { fetchPlayUrlPromise } from '../utils/Data';
+import { bilibiliApi } from '../api/bilibili/BilibiliApiClient';
 import Song from './Song';
 import { browserApi, isExtensionRuntime } from '../platform/browserApi';
 
@@ -49,13 +49,12 @@ interface SyncFavPayload {
 
 export default class StorageManager {
   private static instance: StorageManager;
-  public setFavLists: (lists: PlayList[]) => void;
+  private listeners = new Set<(lists: PlayList[]) => void>();
   public latestFavLists: PlayList[];
   private hasWarnedSyncQuotaExceeded: boolean;
   private syncFavListsTimer: ReturnType<typeof setTimeout> | null;
 
   private constructor() {
-    this.setFavLists = () => {};
     this.latestFavLists = [];
     this.hasWarnedSyncQuotaExceeded = false;
     this.syncFavListsTimer = null;
@@ -68,12 +67,23 @@ export default class StorageManager {
     return StorageManager.instance;
   }
 
+  /** 订阅歌单列表变更，返回取消订阅函数 */
+  subscribe(listener: (lists: PlayList[]) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private notify(): void {
+    const snapshot = [...this.latestFavLists];
+    this.listeners.forEach((l) => l(snapshot));
+  }
+
+  private async localStorageSet(items: Record<string, unknown>): Promise<void> {
+    return new Promise((resolve) => browserApi.storage.local.set(items, resolve));
+  }
+
   private hydrateSongs(songList: any[] = []): Song[] {
-    return songList.map((v: any) => {
-      const song: any = { ...v };
-      song.musicSrc = () => fetchPlayUrlPromise(song.bvid, song.id);
-      return song as Song;
-    });
+    return songList.map((v: any) => Song.hydrate(v));
   }
 
   private async syncFavListsToCloud() {
@@ -147,7 +157,7 @@ export default class StorageManager {
             this.latestFavLists = syncData.ids
               .map((id) => localObj[id])
               .filter(Boolean);
-            this.setFavLists([...this.latestFavLists]);
+            this.notify();
 
             if (isExtensionRuntime()) {
               browserApi.runtime.sendMessage({
@@ -194,7 +204,7 @@ export default class StorageManager {
         if (found) favListsSorted.push(found);
       });
 
-      this.setFavLists(favListsSorted);
+      this.notify();
       this.latestFavLists = favListsSorted;
     });
   }
@@ -213,7 +223,7 @@ export default class StorageManager {
       },
       () => {
         browserApi.storage.local.set({ [MY_FAV_LIST_KEY]: [value.info.id] }, () => {
-          this.setFavLists([value]);
+          this.notify();
           this.latestFavLists = [value];
           this.queueSyncFavListsToCloud();
 
@@ -232,7 +242,7 @@ export default class StorageManager {
     browserApi.storage.local.remove(id, () => {
       const newFavListIds = newFavLists.map((v) => v.info.id);
       browserApi.storage.local.set({ [MY_FAV_LIST_KEY]: newFavListIds }, () => {
-        this.setFavLists(newFavLists);
+        this.notify();
         this.latestFavLists = newFavLists;
         this.queueSyncFavListsToCloud();
 
@@ -254,13 +264,13 @@ export default class StorageManager {
 
     if (!this.latestFavLists.find((v) => v.info.id === value.info.id)) {
       this.latestFavLists.push(value);
-      this.setFavLists([...this.latestFavLists]);
+      this.notify();
     }
 
     browserApi.storage.local.set({ [value.info.id]: value }, () => {
       const newListIDs = this.latestFavLists.map((v) => v.info.id);
       browserApi.storage.local.set({ [MY_FAV_LIST_KEY]: newListIDs }, () => {
-        this.setFavLists([...this.latestFavLists]);
+        this.notify();
         this.queueSyncFavListsToCloud();
 
         if (isExtensionRuntime()) {
@@ -288,9 +298,24 @@ export default class StorageManager {
         this.latestFavLists.push(hydratedList);
       }
 
-      this.setFavLists([...this.latestFavLists]);
+      this.notify();
       this.queueSyncFavListsToCloud();
     });
+  }
+
+  /** 从 storage 读取最新歌单数据并同步到内存（用于 fav-update 消息） */
+  async syncFavFromStorage(favId: string, count: number): Promise<PlayList | undefined> {
+    const fav = await this.readLocalStorage(favId) as PlayList | undefined;
+    if (!fav) return undefined;
+    const idx = this.latestFavLists.findIndex((f) => f.info.id == favId);
+    if (idx === -1) return undefined;
+    const updatedFav = (this.latestFavLists[idx] = fav);
+    updatedFav.songList = updatedFav.songList
+      .slice(0, count)
+      .map((song: any) => Song.hydrate(song))
+      .concat(updatedFav.songList.slice(count));
+    this.notify();
+    return updatedFav;
   }
 
   setLastPlayList(audioLists: Song[]) {
@@ -323,7 +348,7 @@ export default class StorageManager {
     return lyricMappings.find((l) => l.id == songId);
   }
 
-  async readLocalStorage(key: string): Promise<any> {
+  private async readLocalStorage(key: string): Promise<any> {
     return new Promise((resolve) => {
       browserApi.storage.local.get([key], (result) => {
         resolve(result[key]);

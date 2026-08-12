@@ -1,5 +1,5 @@
 ﻿import { describe, it, expect } from 'vitest';
-import { extractSongName } from '../src/utils/Data';
+import { extractSongName } from '../src/utils/string';
 
 describe('extractSongName', () => {
   it('extracts song name in Chinese book quotes', () => {

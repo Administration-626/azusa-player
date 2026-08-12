@@ -1,3 +1,5 @@
+import { bilibiliApi } from '../api/bilibili/BilibiliApiClient';
+
 export interface SongProps {
     cid: string;
     bvid: string;
@@ -31,5 +33,27 @@ export default class Song {
         this.musicSrc = musicSrc;
         this.lyric = lyric;
         this.lyricOffset = lyricOffset;
+    }
+
+    /** 创建 Song 并自动挂载延迟解析的 musicSrc */
+    static withLazySrc(props: Omit<SongProps, 'musicSrc'>): Song {
+        return new Song({
+            ...props,
+            musicSrc: () => bilibiliApi.resolvePlayUrlWithCache(props.bvid, props.cid),
+        });
+    }
+
+    /** 从存储数据（id = cid）反序列化并挂载 musicSrc */
+    static hydrate(raw: { id: string; bvid: string; name: string; singer: string; singerId?: string | number; cover?: string; lyric?: string; lyricOffset?: number }): Song {
+        return Song.withLazySrc({
+            cid: String(raw.id),
+            bvid: raw.bvid,
+            name: raw.name,
+            singer: raw.singer,
+            singerId: raw.singerId ?? '',
+            cover: raw.cover || '',
+            lyric: raw.lyric,
+            lyricOffset: raw.lyricOffset,
+        });
     }
 }

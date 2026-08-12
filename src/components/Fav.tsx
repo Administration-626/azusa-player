@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, memo, useState } from 'react';
 import { ScrollBar } from '../styles/styles';
 import { styled } from '@mui/material/styles';
-import PropTypes from 'prop-types';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell, { tableCellClasses } from '@mui/material/TableCell';
@@ -135,14 +134,7 @@ function TablePaginationActions(props: any) {
   );
 }
 
-TablePaginationActions.propTypes = {
-  count: PropTypes.number.isRequired,
-  onPageChange: PropTypes.func.isRequired,
-  page: PropTypes.number.isRequired,
-  rowsPerPage: PropTypes.number.isRequired,
-};
-
-export const Fav = function ({
+export const Fav = memo(function ({
   FavList,
   currentAudioId,
   onSongIndexChange,
@@ -440,4 +432,4 @@ export const Fav = function ({
       ) : null}
     </>
   );
-};
+});

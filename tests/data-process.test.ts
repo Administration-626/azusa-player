@@ -20,7 +20,7 @@ const dataMocks = vi.hoisted(() => ({
       pages: [{ cid: 'single-cid', bvid, part: 'single' }],
     };
   }),
-  fetchPlayUrlPromise: vi.fn(async (bvid: string, cid: string) => `url-${bvid}-${cid}`),
+  resolvePlayUrlWithCache: vi.fn(async (bvid: string, cid: string) => `url-${bvid}-${cid}`),
   fetchFavList: vi.fn(async () => [
     {
       title: 'fav info',
@@ -36,16 +36,18 @@ const dataMocks = vi.hoisted(() => ({
   fetchBiliColleBvids: vi.fn(async () => []),
 }));
 
-vi.mock('../src/utils/Data', () => {
+vi.mock('../src/api/bilibili/BilibiliApiClient', () => {
   return {
-    fetchVideoInfo: dataMocks.fetchVideoInfo,
-    fetchPlayUrlPromise: dataMocks.fetchPlayUrlPromise,
-    fetchFavList: dataMocks.fetchFavList,
-    fetchBiliSeriesInfo: dataMocks.fetchBiliSeriesInfo,
-    fetchBiliColleList: dataMocks.fetchBiliColleList,
-    fetchFavBvids: dataMocks.fetchFavBvids,
-    fetchBiliSeriesBvids: dataMocks.fetchBiliSeriesBvids,
-    fetchBiliColleBvids: dataMocks.fetchBiliColleBvids,
+    bilibiliApi: {
+      fetchVideoInfo: dataMocks.fetchVideoInfo,
+      resolvePlayUrlWithCache: dataMocks.resolvePlayUrlWithCache,
+      fetchFavList: dataMocks.fetchFavList,
+      fetchBiliSeriesInfo: dataMocks.fetchBiliSeriesInfo,
+      fetchBiliColleList: dataMocks.fetchBiliColleList,
+      fetchFavBvids: dataMocks.fetchFavBvids,
+      fetchBiliSeriesBvids: dataMocks.fetchBiliSeriesBvids,
+      fetchBiliColleBvids: dataMocks.fetchBiliColleBvids,
+    },
   };
 });
 

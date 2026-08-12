@@ -58,10 +58,14 @@ describe('FavList delete last playlist guard', () => {
     };
 
     const fakeStorage = {
+      listeners: new Set<(lists: any[]) => void>(),
+      subscribe: function (this: any, listener: any) {
+        this.listeners.add(listener);
+        return () => this.listeners.delete(listener);
+      },
       latestFavLists: [initialFav],
-      setFavLists: undefined as any,
       initFavLists: vi.fn().mockImplementation(function (this: any) {
-        this.setFavLists?.([...this.latestFavLists]);
+        this.listeners.forEach((l: any) => l([...this.latestFavLists]));
         return Promise.resolve();
       }),
       readLocalStorage: vi.fn(),
@@ -111,10 +115,14 @@ describe('FavList delete last playlist guard', () => {
     };
 
     const fakeStorage = {
+      listeners: new Set<(lists: any[]) => void>(),
+      subscribe: function (this: any, listener: any) {
+        this.listeners.add(listener);
+        return () => this.listeners.delete(listener);
+      },
       latestFavLists: [initialFav],
-      setFavLists: undefined as any,
       initFavLists: vi.fn().mockImplementation(function (this: any) {
-        this.setFavLists?.([...this.latestFavLists]);
+        this.listeners.forEach((l: any) => l([...this.latestFavLists]));
         return Promise.resolve();
       }),
       readLocalStorage: vi.fn(),

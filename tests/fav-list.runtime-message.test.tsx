@@ -59,13 +59,23 @@ describe('FavList runtime message regression', () => {
     };
 
     const fakeStorage = {
+      listeners: new Set<(lists: any[]) => void>(),
+      subscribe: function (this: any, listener: any) {
+        this.listeners.add(listener);
+        return () => this.listeners.delete(listener);
+      },
       latestFavLists: [initialFav],
-      setFavLists: undefined as any,
       initFavLists: vi.fn().mockImplementation(function (this: any) {
-        this.setFavLists?.([...this.latestFavLists]);
+        this.listeners.forEach((l: any) => l([...this.latestFavLists]));
         return Promise.resolve();
       }),
-      readLocalStorage: vi.fn().mockResolvedValue(updatedFav),
+      syncFavFromStorage: vi.fn().mockImplementation(function (this: any, _favId: string, _count: number) {
+        const merged = { ...this.latestFavLists[0], ...updatedFav };
+        merged.songList = merged.songList || [];
+        this.latestFavLists[0] = merged;
+        this.listeners.forEach((l: any) => l([...this.latestFavLists]));
+        return Promise.resolve(merged);
+      }),
       getPlayerSetting: vi.fn().mockResolvedValue({ darkMode: false }),
       setPlayerSetting: vi.fn(),
       updateFavList: vi.fn(),
@@ -98,7 +108,7 @@ describe('FavList runtime message regression', () => {
     });
 
     await waitFor(() => {
-      expect(fakeStorage.readLocalStorage).toHaveBeenCalledWith('FavList-1');
+      expect(fakeStorage.syncFavFromStorage).toHaveBeenCalledWith('FavList-1', 1);
       expect(screen.getByTestId('mock-fav')).toHaveTextContent('新歌单');
       expect(screen.getByTestId('mock-fav')).toHaveAttribute('data-songcount', '2');
     });

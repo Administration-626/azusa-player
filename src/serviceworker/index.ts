@@ -1,5 +1,6 @@
 import { getSongsFromSource, type SearchSource } from '../background/DataProcess';
 import { parseSearchSource, type ContextTargetPayload } from '../utils/searchSource';
+import { fetchSongsBySource } from '../api/bilibili/fetchSongsBySource';
 
 chrome.action.onClicked.addListener(() => {
   chrome.runtime.openOptionsPage();
@@ -433,7 +434,7 @@ async function getSongsFromCurrentPage(source: SearchSource, tabId?: number): Pr
       target: { tabId },
       world: 'MAIN',
       args: [source],
-      func: fetchSongsInPageContext,
+      func: fetchSongsBySource,
     });
 
     const songs = results?.[0]?.result;
@@ -449,138 +450,6 @@ async function getSongsFromCurrentPage(source: SearchSource, tabId?: number): Pr
   }
 }
 
-async function fetchSongsInPageContext(source: SearchSource) {
-  const URL_VIDEO_INFO = 'https://api.bilibili.com/x/web-interface/view?bvid={bvid}';
-  const URL_BILISERIES_INFO =
-    'https://api.bilibili.com/x/series/archives?mid={mid}&series_id={sid}&only_normal=true&sort=desc&pn={pn}&ps=30';
-  const URL_BILICOLLE_INFO =
-    'https://api.bilibili.com/x/polymer/web-space/seasons_archives_list?mid={mid}&season_id={sid}&sort_reverse=false&page_num={pn}&page_size=30';
-  const URL_FAV_LIST =
-    'https://api.bilibili.com/x/v3/fav/resource/list?media_id={mid}&pn={pn}&ps=20&keyword=&order=mtime&type=0&tid=0&platform=web&jsonp=jsonp';
-
-  const fetchJson = async (url: string) => {
-    const response = await fetch(url, {
-      credentials: 'include',
-      headers: {
-        Accept: 'application/json, text/plain, */*',
-      },
-    });
-
-    const contentType = response.headers.get('content-type') || '';
-    const text = await response.text();
-    if (!contentType.includes('application/json')) {
-      throw new Error(`Expected JSON from ${url}, received ${contentType || 'unknown'}: ${text.slice(0, 120)}`);
-    }
-
-    const json = JSON.parse(text);
-    if (typeof json?.code === 'number' && json.code !== 0) {
-      throw new Error(json.message || json.msg || `Bilibili API error ${json.code}`);
-    }
-
-    return json;
-  };
-
-  const toSongs = (data: any, bvid: string) => {
-    const pages = Array.isArray(data?.pages) ? data.pages : [];
-    const baseSong = {
-      bvid,
-      singer: String(data?.owner?.name || ''),
-      singerId: data?.owner?.mid ?? '',
-      cover: String(data?.pic || ''),
-      lyric: '',
-      lyricOffset: 0,
-    };
-
-    if (pages.length <= 1) {
-      const cid = String(pages[0]?.cid || data?.cid || '');
-      if (!cid) return [];
-      return [
-        {
-          ...baseSong,
-          id: cid,
-          name: String(data?.title || bvid),
-        },
-      ];
-    }
-
-    return pages
-      .map((page: any) => {
-        const cid = String(page?.cid || '');
-        if (!cid) return null;
-        return {
-          ...baseSong,
-          id: cid,
-          name: String(page?.part || data?.title || bvid),
-        };
-      })
-      .filter(Boolean);
-  };
-
-  const fetchVideoSongs = async (bvid: string) => {
-    const json = await fetchJson(URL_VIDEO_INFO.replace('{bvid}', bvid));
-    return toSongs(json?.data, bvid);
-  };
-
-  const fetchSongsByBvids = async (bvids: string[]) => {
-    const uniqueBvids = Array.from(new Set(bvids.filter(Boolean)));
-    const songGroups = await Promise.all(uniqueBvids.map((bvid) => fetchVideoSongs(bvid)));
-    return songGroups.flat();
-  };
-
-  if (source.type === 'bvid') {
-    return fetchVideoSongs(source.bvid);
-  }
-
-  if (source.type === 'fav') {
-    const firstPage = await fetchJson(URL_FAV_LIST.replace('{mid}', source.mid).replace('{pn}', '1'));
-    const mediaCount = Number(firstPage?.data?.info?.media_count || 0);
-    const totalPages = Math.max(1, Math.ceil(mediaCount / 20));
-    const pageRequests = [Promise.resolve(firstPage)];
-
-    for (let page = 2; page <= totalPages; page += 1) {
-      pageRequests.push(fetchJson(URL_FAV_LIST.replace('{mid}', source.mid).replace('{pn}', String(page))));
-    }
-
-    const pages = await Promise.all(pageRequests);
-    const bvids = pages.flatMap((pageJson: any) =>
-      (pageJson?.data?.medias || []).map((media: any) => String(media?.bvid || '')).filter(Boolean),
-    );
-    return fetchSongsByBvids(bvids);
-  }
-
-  if (source.type === 'series') {
-    const firstPage = await fetchJson(
-      URL_BILISERIES_INFO.replace('{mid}', source.mid).replace('{sid}', source.sid).replace('{pn}', '1'),
-    );
-    const archives = firstPage?.data?.archives || [];
-    const bvids = archives.map((item: any) => String(item?.bvid || '')).filter(Boolean);
-    return fetchSongsByBvids(bvids);
-  }
-
-  if (source.type === 'collection') {
-    const firstPage = await fetchJson(
-      URL_BILICOLLE_INFO.replace('{mid}', source.mid).replace('{sid}', source.sid).replace('{pn}', '1'),
-    );
-    const totalCount = Number(firstPage?.data?.meta?.total || 0);
-    const pageSize = Number(firstPage?.data?.page?.page_size || 30);
-    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-    const pageRequests = [Promise.resolve(firstPage)];
-
-    for (let page = 2; page <= totalPages; page += 1) {
-      pageRequests.push(
-        fetchJson(URL_BILICOLLE_INFO.replace('{mid}', source.mid).replace('{sid}', source.sid).replace('{pn}', String(page))),
-      );
-    }
-
-    const pages = await Promise.all(pageRequests);
-    const bvids = pages.flatMap((pageJson: any) =>
-      (pageJson?.data?.archives || []).map((item: any) => String(item?.bvid || '')).filter(Boolean),
-    );
-    return fetchSongsByBvids(bvids);
-  }
-
-  return [];
-}
 
 async function getFromLocalStorage(keys: string[]): Promise<any> {
   return new Promise((resolve, reject) => {
